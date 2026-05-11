@@ -1,0 +1,38 @@
+# Copyright (C) 2026 White Atelier
+# This software is released under the MIT License.
+# See the LICENSE file in the project root for more details.
+
+@PACKAGE_INIT@
+
+if (@BUILD_ROAH_ASSERT@)
+    add_compile_definitions(
+        $<$<CONFIG:Debug>:ROAH_ASSERT_ENABLE=1>
+    )
+endif()
+
+if (@BUILD_ROAH_SUBPROCESS@)
+endif()
+
+if (@BUILD_ROAH_LOGGER@)
+    find_package(spdlog 1 REQUIRED)
+
+    if (@ROAH_LOGGER_ENABLE_WEBV_SINK@)
+        find_package(ixwebsocket REQUIRED)
+        find_package(nlohmann_json REQUIRED)
+    endif()
+endif()
+
+if (@BUILD_ROAH_CONFIG@)
+    find_package(toml11 REQUIRED)
+endif()
+
+if (@BUILD_ROAH_URL_PARSER@)
+endif()
+
+if (@BUILD_APP_ROAH_LOGGING_WEB_VIEWER@)
+    find_package(CLI11 REQUIRED)
+    find_package(ixwebsocket REQUIRED)
+    find_package(nlohmann_json REQUIRED)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/@CMAKE_PROJECT_NAME@Targets.cmake")

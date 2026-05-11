@@ -1,0 +1,157 @@
+﻿---
+BasedOnStyle: Google
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: AcrossComments
+AlignConsecutiveBitFields: AcrossComments
+AlignConsecutiveDeclarations: AcrossComments
+AlignConsecutiveMacros: AcrossComments
+AlignEscapedNewlines: Left
+AlignOperands: AlignAfterOperator
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+AllowAllArgumentsOnNextLine: false  # 関数の引数が並ぶ
+
+ExperimentalAutoDetectBinPacking: false
+
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+# AlwaysBreakAfterReturnType: TopLevelDefinitions
+AlwaysBreakAfterReturnType: All
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: Yes
+
+BinPackArguments: false
+BinPackParameters: false
+BitFieldColonSpacing: Both
+BracedInitializerIndentWidth: 4
+BreakAfterAttributes: Always
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: true
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+BreakBeforeBinaryOperators: All
+BreakBeforeConceptDeclarations: Always
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+BreakStringLiterals: false
+
+ColumnLimit: 120
+# CommentPragmas: ""  # do not formating pragma
+CompactNamespaces: false
+ConstructorInitializerIndentWidth: 4  # ?
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: false
+
+DerivePointerAlignment: false
+
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: Always
+
+FixNamespaceComments: true
+
+IncludeBlocks: Regroup
+IndentAccessModifiers: false
+
+IndentCaseBlocks: true
+IndentCaseLabels: false
+IndentPPDirectives: AfterHash
+IndentRequires: false
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+IncludeCategories:
+  - Regex:           '^<Q[^/^\.]+>'
+    Priority:        3
+  - Regex:           '^<[^/^\.]*>'
+    Priority:        6
+  - Regex:           '^<[^/]*>'
+    Priority:        5
+  - Regex:           '^<adhoc/'
+    Priority:        4
+  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority:        2
+  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+    Priority:        3
+  - Regex:           '.*'
+    Priority:        1
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+LambdaBodyIndentation: Signature
+Language: Cpp
+
+MaxEmptyLinesToKeep: 1
+
+NamespaceIndentation: None
+
+PackConstructorInitializers: Never
+ConstructorInitializerAllOnOneLineOrOnePerLine: false  # DEPRECATED
+
+PointerAlignment: Middle
+
+QualifierAlignment: Custom
+QualifierOrder: ['constexpr', 'friend', 'inline', 'static', 'const', 'volatile', 'type']
+
+ReferenceAlignment: Middle
+ReflowComments: true
+RequiresExpressionIndentation: OuterScope
+RemoveSemicolon: true
+
+ShortNamespaceLines: 0
+SortIncludes: CaseInsensitive
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceAroundPointerQualifiers: Both
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: false
+
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard: c++20
+
+TabWidth: 4
+
+UseCRLF: true
+UseTab: Never
+
+...

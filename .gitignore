@@ -1,0 +1,7 @@
+.vscode/settings.json
+build/
+install/
+out/
+*.cmd
+*.sh
+CMakeUserPresets.json

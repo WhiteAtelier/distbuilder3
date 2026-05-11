@@ -1,0 +1,56 @@
+#ifndef ROAH_DISTB_CONFJG_DATA_NODE_VIEW_HPP
+#define ROAH_DISTB_CONFJG_DATA_NODE_VIEW_HPP
+
+
+namespace roah::distb::confjg {
+
+    template<typename ImplT>
+    class DataNodeView {
+    public:
+    using  IterT = typename ImplT::Iterator;
+    using  ObjectIterableT = typename ImplT::ObjectIterable;
+
+
+        protected:
+        DataNodeView() ;
+
+        public:
+        DataNodeView(DataNodeView&&) noexcept ;
+        DataNodeView& operator=(DataNodeView&&) noexcept ;
+        virtual ~DataNodeView() noexcept ;
+
+        DataNodeView(const DataNodeView&) = delete;
+        DataNodeView& operator=(const DataNodeView&) = delete;
+
+        virtual bool isNull() const noexcept = 0;
+
+        virtual bool hasString() const noexcept = 0;
+        virtual bool hasObject() const noexcept = 0;
+        virtual bool hasArray() const noexcept = 0;
+        virtual bool hasBoolean() const noexcept = 0;
+        virtual bool hasInteger() const noexcept = 0;
+        virtual bool hasDouble() const noexcept = 0;
+
+        virtual std::string getAsString() const = 0;
+        virtual bool getAsBoolean() const = 0;
+        virtual std::int64_t getAsInteger() const = 0;
+        virtual double getAsDouble() const = 0;
+        
+        // array, object
+        virtual std::size_t size() const = 0;
+        virtual bool empty() const = 0;
+
+        // array
+        virtual IterT begin() const = 0;
+        virtual IterT end() const = 0;
+        virtual ImplT at(const std::size_t index) const = 0;
+
+        // object
+        virtual bool contains(const std::string& key) const = 0;
+        virtual ImplT at(const std::string_view key) const = 0;
+        virtual ObjectIterableT items() const = 0;
+    };
+
+}
+
+#endif

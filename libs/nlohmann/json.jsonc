@@ -1,0 +1,93 @@
+{
+    "entries": [
+        {
+            // 最初はフル定義
+            "version": "v1.2.3",
+            "options": {
+                "Hoge": "fuga", // オプションとデフォルト値
+                "Piyo": false,
+            },
+            "dependencies": {
+                "nlohmann.json": {
+                    "name": "foo",
+                    "version": [
+                        "v1.0.0",
+                        "...", // その間全て
+                        "v1.1.0",
+                    ],
+                    "options": {
+                        "FooOption": 42, // 強制オプション
+                    },
+                },
+                "bar": {
+                    "name": "bar",
+                    "version": [
+                        "v2.0.0",
+                        "...", // 以降全て
+                    ],
+                },
+            },
+            "recipes": [
+                // ビルド手順
+                "echo",
+                "download",
+                "configure",
+                "build",
+            ],
+            "steps": {
+                // ビルド手順の定義
+                "echo": {
+                    "cmd": "subp",
+                    "args": ["echo Hello, World!"],
+                },
+                "download": {
+                    "cmd": "wget",
+                    "url": "https://example.com/file/${version}.zip",
+                    "output": "file.zip",
+                    "hash": "abc123def456...",
+                },
+                "configure": {
+                    "cmd": "cmake-configure",
+                    "args": ["-DFOO=${options.Hoge}"],
+                },
+                "build": {
+                    "cmd": "cmake-build",
+                    "args": ["--target", "all"],
+                },
+            },
+        },
+        {
+            // その後は継承が利用できる
+            // 基本的に明記したら上書き、null 指定で削除、明記なしで継承
+            "version": "v2.0.0",
+            "base": "${previous}", // 基底
+            "options": {
+                "Hoge": "fuga", // すでにあるオプションの場合、デフォルト値は上書き
+                "Piyo": null, // null 指定でオプション削除
+            },
+            "dependencies": {
+                "nlohmann.json": {
+                    "version": ["v1.1.0"],
+                    "options": {
+                        "FooOption": null, // null 指定でオプション制約削除
+                        "BarOption": true, // 新しいオプション制約追加
+                    },
+                },
+                // 依存関係自体を削除したい場合は、null 指定
+                "bar": null, // 依存関係削除
+            },
+            "steps": {
+                "echo": {
+                    "args": ["echo Hello, v2!"], // ビルド手順の引数上書き
+                },
+                "configure": null, // ビルド手順削除
+                "new-step": {
+                    // 新しいビルド手順追加
+                    "cmd": "custom-cmd",
+                    "args": ["--option"],
+                },
+            },
+            "recipes": ["download", "build", "new-step"], // ビルド手順の定義も上書き
+        },
+    ],
+}
