@@ -13,6 +13,9 @@ project(distbuilder
         CXX
 )
 
+option(DISTBUILDER3_BUILD_DOCS "Generate documents." OFF)
+option(DISTBUILDER3_BUILD_TESTS "Build test project." OFF)
+
 include(cmake/doxygen/doxygen.cmake)
 include(cmake/utils.cmake)
 
@@ -33,6 +36,17 @@ add_compile_definitions(
     "$<$<CXX_COMPILER_ID:MSVC>:NOMINMAX>"
     "$<$<CXX_COMPILER_ID:MSVC>:WIN32_LEAN_AND_MEAN>"
 )
+
+add_subdirectory(deps)
+find_package(nlohmann_json 3 REQUIRED)
+find_package(toml11        4 REQUIRED)
+find_package(CLI11         2 REQUIRED)
+
+if (DISTBUILDER3_BUILD_TESTS)
+    enable_testing()
+    find_package(GTest 1 REQUIRED)
+    include(GoogleTest)
+endif()
 
 add_subdirectory(app)
 

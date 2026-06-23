@@ -2,14 +2,6 @@
 # This software is released under the MIT License.
 # See the LICENSE file in the project root for more details.
 
-option(BUILD_TESTS "Build test project." OFF)
-
-if (BUILD_TESTS)
-    enable_testing()
-    find_package(GTest REQUIRED)
-    include(GoogleTest)
-endif()
-
 # =============================================================================================== #
 #
 # roah_add_library
@@ -216,16 +208,10 @@ function(roah_add_library ARG_TARGET_NAME)
         endif()
     endif()
 
-    install(
-        TARGETS ${ARG_TARGET_NAME}
-        EXPORT ${CMAKE_PROJECT_NAME}-export
-        FILE_SET HEADERS
-    )
-
     # ========================================= #
     # test
     # ========================================= #
-    if (BUILD_TESTS AND (DEFINED ARG_TESTS))
+    if (DISTBUILDER3_BUILD_TESTS AND (DEFINED ARG_TESTS))
 
         # --- TESTS の一覧を絶対パスに変換 ---
         if (DEFINED ARG_TESTS)
@@ -500,7 +486,7 @@ function(roah_add_executable ARG_TARGET_NAME)
     # =======================================
     # test
     # =======================================
-    if (BUILD_TESTS AND (DEFINED ARG_TESTS))
+    if (DISTBUILDER3_BUILD_TESTS AND (DEFINED ARG_TESTS))
 
         # ARG_TESTS を見て, test/ を付加する
         if (DEFINED ARG_TESTS)
@@ -600,44 +586,4 @@ function(roah_add_executable ARG_TARGET_NAME)
         )
 
     endif()
-endfunction()
-
-function(export_config)
-    install (
-        EXPORT
-            ${CMAKE_PROJECT_NAME}-export
-        FILE
-            ${CMAKE_PROJECT_NAME}Targets.cmake
-        DESTINATION
-            lib/cmake/${CMAKE_PROJECT_NAME}
-        NAMESPACE
-            ${CMAKE_PROJECT_NAME}::
-        EXPORT_LINK_INTERFACE_LIBRARIES
-    )
-
-    include(CMakePackageConfigHelpers)
-    configure_package_config_file(
-        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Config.cmake.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake"
-        INSTALL_DESTINATION
-            "lib/cmake/${CMAKE_PROJECT_NAME}"
-        NO_SET_AND_CHECK_MACRO
-    )
-
-    write_basic_package_version_file(
-        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}ConfigVersion.cmake"
-        VERSION
-            "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
-        COMPATIBILITY
-            AnyNewerVersion
-    )
-
-    install(
-        FILES
-            "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake"
-            "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}ConfigVersion.cmake"
-        DESTINATION
-            "lib/cmake/${CMAKE_PROJECT_NAME}"
-    )
-
 endfunction()

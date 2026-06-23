@@ -16,7 +16,7 @@
 TEST(ExpandTemplateTest, NoPlaceholder)
 {
     const std::unordered_map<std::string, roah::distb::utils::OptionValue> vars;
-    std::string                                                             result;
+    std::string                                                            result;
     const bool ok = roah::distb::utils::expandTemplate("Hello, World!", vars, result);
     EXPECT_TRUE(ok);
     EXPECT_EQ(result, "Hello, World!");
@@ -51,7 +51,7 @@ TEST(ExpandTemplateTest, MultipleVars)
 TEST(ExpandTemplateTest, MissingVar)
 {
     const std::unordered_map<std::string, roah::distb::utils::OptionValue> vars;
-    std::string                                                             result;
+    std::string                                                            result;
     const bool ok = roah::distb::utils::expandTemplate("Hello, ${name}!", vars, result);
     EXPECT_FALSE(ok);
     EXPECT_EQ(result, "Hello, ${name}!");
@@ -73,7 +73,7 @@ TEST(ExpandTemplateTest, PartialMissing)
 TEST(ExpandTemplateTest, DollarEscape)
 {
     const std::unordered_map<std::string, roah::distb::utils::OptionValue> vars;
-    std::string                                                             result;
+    std::string                                                            result;
     const bool ok = roah::distb::utils::expandTemplate("Price: $$100", vars, result);
     EXPECT_TRUE(ok);
     EXPECT_EQ(result, "Price: $100");
@@ -83,7 +83,7 @@ TEST(ExpandTemplateTest, DollarEscape)
 TEST(ExpandTemplateTest, DollarOtherChar)
 {
     const std::unordered_map<std::string, roah::distb::utils::OptionValue> vars;
-    std::string                                                             result;
+    std::string                                                            result;
     const bool ok = roah::distb::utils::expandTemplate("$X $Y", vars, result);
     EXPECT_TRUE(ok);
     EXPECT_EQ(result, "$X $Y");
@@ -93,7 +93,7 @@ TEST(ExpandTemplateTest, DollarOtherChar)
 TEST(ExpandTemplateTest, TrailingDollar)
 {
     const std::unordered_map<std::string, roah::distb::utils::OptionValue> vars;
-    std::string                                                             result;
+    std::string                                                            result;
     const bool ok = roah::distb::utils::expandTemplate("end$", vars, result);
     EXPECT_TRUE(ok);
     EXPECT_EQ(result, "end$");
@@ -107,7 +107,7 @@ TEST(ExpandTemplateTest, UnclosedBrace)
     };
     std::string result;
     // ${name は閉じ括弧がないのでそのまま残る.
-    const bool ok = roah::distb::utils::expandTemplate("${name", vars, result);
+    const bool  ok = roah::distb::utils::expandTemplate("${name", vars, result);
     EXPECT_TRUE(ok);
     EXPECT_EQ(result, "${name");
 }
@@ -116,7 +116,7 @@ TEST(ExpandTemplateTest, UnclosedBrace)
 TEST(ExpandTemplateTest, EmptyVarName)
 {
     const std::unordered_map<std::string, roah::distb::utils::OptionValue> vars;
-    std::string                                                             result;
+    std::string                                                            result;
     const bool ok = roah::distb::utils::expandTemplate("${}", vars, result);
     EXPECT_FALSE(ok);
     EXPECT_EQ(result, "${}");
@@ -219,5 +219,5 @@ TEST(ExpandTemplateTest, BoolValue_True)
     std::string result;
     const bool  ok = roah::distb::utils::expandTemplate("flag=${flag}", vars, result);
     EXPECT_TRUE(ok);
-    EXPECT_EQ(result, "flag=1");
+    EXPECT_EQ(result, "flag=ON");
 }

@@ -1,6 +1,3 @@
-// This file contains code generated with the assistance of Claude (Anthropic), an AI assistant.
-// The generated code is provided as-is.
-
 #include "roah/distb/config/library_entry.hpp"
 
 #include "impl/step_wget_impl.hpp"
@@ -24,12 +21,10 @@ roah::distb::config::LibraryEntry::~LibraryEntry() noexcept = default;
 void
 roah::distb::config::LibraryEntry::setBase(const LibraryEntry & base_entry)
 {
-    // base_entry の全フィールドをコピーして基底として設定する.
-    // その後に updateFromJson を呼ぶことで差分が適用される.
     this->options_      = base_entry.options_;
     this->dependencies_ = base_entry.dependencies_;
     this->recipes_      = base_entry.recipes_;
-    // unique_ptr はコピー不可なので, 各ステップを clone() で複製する.
+
     this->steps_.clear();
     for (const auto & [key, ptr] : base_entry.steps_)
     {
@@ -140,7 +135,7 @@ roah::distb::config::LibraryEntry::updateFromJson(const nlohmann::json & json)
                 const auto cmd = val["cmd"].get<std::string>();
                 if (cmd == "wget")
                 {
-                    auto step = StepWgetImpl::loadFromJson(val);
+                    auto step = impl::StepWgetImpl::loadFromJson(val);
                     if (step)
                     {
                         this->steps_.insert_or_assign(key, std::move(step));

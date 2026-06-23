@@ -1,6 +1,4 @@
 
-add_subdirectory(deps)
-
 roah_add_library(distb-utils
     LIBRARIES
         nlohmann_json::nlohmann_json
@@ -9,11 +7,13 @@ roah_add_library(distb-utils
         utils/subprocess.cpp
         utils/option_value.cpp
         utils/string_expander.cpp
+        utils/string.cpp
 
     HEADERS
         roah/distb/utils/hash.hpp
         roah/distb/utils/option_value.hpp
         roah/distb/utils/string_expander.hpp
+        roah/distb/utils/string.hpp
         roah/distb/utils/subprocess.hpp
 
     TESTS
@@ -37,7 +37,7 @@ else()
     target_link_libraries(distb-utils PRIVATE OpenSSL::Crypto)
 endif()
 
-roah_add_library(distb-confjg
+roah_add_library(distb-config
     LIBRARIES
         nlohmann_json
         distb-utils
@@ -64,9 +64,27 @@ roah_add_library(distb-confjg
 roah_add_executable(distbuilder
     LIBRARIES
         CLI11::CLI11
-        distb-confjg
+        toml11::toml11
+        distb-config
         distb-utils
 
     SOURCES
         main.cpp
+
+        app/app_config_platform.cpp
+        app/app_config.cpp
+        app/app_config.hpp
+        app/app.cpp
+        app/app.hpp
+        app/errors.cpp
+        app/errors.hpp
+        app/logger.cpp
+        app/logger.hpp
+)
+
+target_compile_definitions(distbuilder
+    PRIVATE
+        $<$<PLATFORM_ID:Windows>:ROAH_ARCH_WIN32=1>
+        $<$<PLATFORM_ID:MacOS>:ROAH_ARCH_MACOS=1>
+        $<$<PLATFORM_ID:Linux>:ROAH_ARCH_LINUX=1>
 )
