@@ -1,0 +1,16 @@
+#include "roah/distb/config/condition.hpp"
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Condition class implementation
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////
+roah::distb::config::Condition::Condition(std::string op_name)
+    : op_name_{ std::move(op_name) }
+{}
+
+const std::string &
+roah::distb::config::Condition::getOpName() const noexcept
+{
+    return this->op_name_;
+}

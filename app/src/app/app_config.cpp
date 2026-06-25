@@ -1,8 +1,7 @@
 #include "app_config.hpp"
 
-#include "errors.hpp"
-#include "logger.hpp"
-//
+#include "roah/distb/errors.hpp"
+#include "roah/distb/logger.hpp"
 #include "roah/distb/utils/string.hpp"
 
 #include <toml.hpp>
@@ -11,10 +10,13 @@
 #include <fstream>
 #include <iostream>
 
-roah::distb::app::AppConfig::AppConfig()
-    : file_path_{ _getDefaultFilePath() }
+roah::distb::app::AppConfig::AppConfig(std::filesystem::path executable_dir)
+    : executable_dir_{ std::move(executable_dir) }
+    , default_search_path_{ this->executable_dir_ / "libs" }
+    , file_path_{ _getDefaultFilePath() }
     , build_dir_{ _getDefaultBuildDirectory() }
     , install_dir_{ _getDefaultInstallDirectory() }
+    , search_paths_{ { this->default_search_path_ } }
     , cmake_executable_{ u8"cmake" }
     , generator_{}
     , architecture_{}
@@ -39,14 +41,20 @@ roah::distb::app::AppConfig::load()
 {
     logger.trace("Open config file. {}", this->file_path_.string());
 
-    std::ifstream ifst{ this->file_path_ };
-    AppError::check(ifst, "Failed to open config file: {}", this->file_path_.string());
+    std::string content;
+    {
+        auto ifst = std::ifstream{ this->file_path_ };
+        AppError::check(ifst, "Failed to open config file: {}", this->file_path_.u8string());
+        content = std::string{ (std::istreambuf_iterator<char>(ifst)), std::istreambuf_iterator<char>() };
+    }
 
     logger.trace("-- Opened.");
 
+    this->search_paths_.clear();
+
     try
     {
-        const auto root = toml::parse(ifst);
+        const auto root = toml::parse_str(content);
 
         if (root.contains("directory"))
         {
@@ -101,6 +109,7 @@ roah::distb::app::AppConfig::load()
 
     this->build_dir_   = std::filesystem::absolute(this->build_dir_).make_preferred();
     this->install_dir_ = std::filesystem::absolute(this->install_dir_).make_preferred();
+    this->search_paths_.emplace_back(this->default_search_path_);
 
     logger.trace("-- Done.");
     logger.trace("[ Directory ] Build Directory   = {}", this->build_dir_.u8string());
@@ -113,6 +122,12 @@ roah::distb::app::AppConfig::load()
     logger.trace("[   CMake   ] Executable        = {}", this->cmake_executable_);
     logger.trace("[   CMake   ] Generator         = {}", this->generator_);
     logger.trace("[   CMake   ] Architecture      = {}", this->architecture_);
+}
+
+const std::filesystem::path &
+roah::distb::app::AppConfig::getExecutableDirectory() const noexcept
+{
+    return this->executable_dir_;
 }
 
 const std::filesystem::path &

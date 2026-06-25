@@ -1,30 +1,55 @@
-// This file contains code generated with the assistance of Claude (Anthropic), an AI assistant.
-// The generated code is provided as-is.
+#ifndef ROAH_DISTB_CONFIG_LIBRARY_HPP
+#define ROAH_DISTB_CONFIG_LIBRARY_HPP
 
-#ifndef ROAH_DISTB_CONFJG_LIBRARY_HPP
-#define ROAH_DISTB_CONFJG_LIBRARY_HPP
+#include "library_entry.hpp"
 
+#include <fstream>
+#include <unordered_map>
 #include <vector>
 
-#include <roah/distb/confjg/library_entry.hpp>
+namespace roah::distb::config {
 
-namespace roah::distb::confjg {
-
-// ライブラリ設定ファイル (json.jsonc) のルート構造を表すクラス.
-class Library {
+class Library
+{
 public:
-    // バージョンエントリのリスト.
-    // 先頭エントリは完全な定義, 以降のエントリは base フィールドによる差分定義が可能.
-    std::vector<LibraryEntry> entries;
+    Library(std::string author, std::string repo);
+    Library(Library &&) noexcept;
+    ~Library() noexcept;
 
-    Library() = default;
-    Library(const Library&) = default;
-    Library(Library&&) = default;
-    Library& operator=(const Library&) = default;
-    Library& operator=(Library&&) = default;
-    ~Library() = default;
+    Library &
+    operator=(Library &&) noexcept
+        = default;
+
+    Library(const Library &) = delete;
+    Library &
+    operator=(const Library &)
+        = delete;
+
+    const std::string &
+    getAuthor() const noexcept;
+
+    const std::string &
+    getRepo() const noexcept;
+
+    void
+    loadFromJson(std::ifstream & ifst);
+
+    const LibraryEntry *
+    findLibraryEntryByVersion(const std::string & version) const;
+
+    std::vector<std::string>
+    getAllVersions() const;
+
+private:
+    void
+    _addLibraryEntry(LibraryEntry && item);
+
+    std::string                                       author_;
+    std::string                                       repo_;
+    std::unordered_map<std::string, LibraryEntry>     entries_version_map_;
+    std::vector<std::reference_wrapper<LibraryEntry>> entries_;
 };
 
-} // namespace roah::distb::confjg
+}  // namespace roah::distb::config
 
-#endif // ROAH_DISTB_CONFJG_LIBRARY_HPP
+#endif  // ROAH_DISTB_CONFJG_LIBRARY_HPP

@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-namespace roah::distb::app {
+namespace roah::distb {
 
 /// @brief シンプルなロギングクラス.
 class Logger
@@ -15,6 +15,9 @@ public:
 
     void
     setVerbose(const bool verbose = true) noexcept;
+
+    bool
+    isVerbose() const noexcept;
 
     template <typename... Args>
     void
@@ -50,7 +53,7 @@ Logger::trace(const std::string_view msg, const Args &... args)
     }
 }
 
-}  // namespace roah::distb::app
+}  // namespace roah::distb
 
 namespace std {
 template <>

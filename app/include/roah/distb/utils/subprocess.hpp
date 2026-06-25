@@ -20,11 +20,19 @@ struct RunResult
     std::string stderr_output;
 };
 
+struct RunArgs
+{
+    bool print_stdout   = true;  // 標準出力を cout に書き出すかどうか.
+    bool print_stderr   = true;  // 標準エラーを cerr に書き出すかどうか.
+    bool capture_stdout = true;  // 標準出力をキャプチャするかどうか.
+    bool capture_stderr = true;  // 標準エラーをキャプチャするかどうか.
+};
+
 // 指定されたコマンドを実行し, 結果を返す.
 // stdout はリアルタイムで cout に, stderr は cerr に書き出される.
 // この関数はブロッキングで, プロセスの終了まで待機する.
 RunResult
-run(const std::vector<std::u8string> & cmds);
+run(const std::vector<std::u8string> & cmds, const RunArgs & args = {});
 
 }  // namespace roah::distb::utils
 

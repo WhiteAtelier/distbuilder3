@@ -1,22 +1,26 @@
-// This file contains code generated with the assistance of Claude (Anthropic), an AI assistant.
-// The generated code is provided as-is.
-
 #ifndef ROAH_DISTB_CONFIG_STEP_DEF_HPP
 #define ROAH_DISTB_CONFIG_STEP_DEF_HPP
+
+#include <nlohmann/json_fwd.hpp>
 
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
+namespace roah::distb {
+class WorkingContext;
+}  // namespace roah::distb
+
 namespace roah::distb::config {
 
 // ライブラリのビルドステップの定義を表すクラス.
 // cmd フィールドによってステップの種別が決まり, 種別ごとに有効なフィールドが異なる.
+// todo: Step class に名前変える
 class StepDef
 {
 protected:
-    StepDef(std::string cmd);
+    StepDef(const std::string_view cmd);
 
 public:
     StepDef(const StepDef &);
@@ -28,18 +32,34 @@ public:
     virtual ~StepDef() noexcept;
 
     virtual void
-    operator()() const
+    loadFromJson(const nlohmann::json & json)
+        = 0;
+
+    virtual void
+    operator()(const WorkingContext & context) const
         = 0;
 
     virtual std::unique_ptr<StepDef>
     clone() const = 0;
 
-    const std::string &
+    std::string_view
     getCmd() const noexcept;
 
 private:
-    std::string cmd_;
+    std::string_view cmd_;
 };
+
+struct StepGenerator
+{
+    StepGenerator()          = default;
+    virtual ~StepGenerator() = default;
+
+    virtual std::unique_ptr<StepDef>
+    operator()() const = 0;
+};
+
+std::unique_ptr<StepDef>
+makeStepDefFromJson(const nlohmann::json & json);
 
 }  // namespace roah::distb::config
 

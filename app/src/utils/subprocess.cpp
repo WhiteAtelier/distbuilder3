@@ -1,7 +1,7 @@
 // This file contains code generated with the assistance of Claude (Anthropic), an AI assistant.
 // The generated code is provided as-is.
 
-#include <roah/distb/utils/subprocess.hpp>
+#include "roah/distb/utils/subprocess.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -49,19 +49,22 @@ u8ToWide(const std::u8string & u8str)
 
 // Windows 用: HANDLE からデータを読み取る
 std::string
-readPipeToStream(const HANDLE pipe, std::ostream & stream)
+readPipeToStream(const HANDLE pipe, const bool capture, std::ostream * stream)
 {
     std::string captured;
     char        buffer[4096];
     DWORD       bytes_read = 0;
     while (ReadFile(pipe, buffer, sizeof(buffer), &bytes_read, nullptr) && bytes_read > 0)
     {
-        // const auto offset = captured.size();
-        // captured.resize(offset + bytes_read);
-        // std::memcpy(captured.data() + offset, buffer, bytes_read);
-        captured += std::string_view{ buffer, bytes_read };
-        stream.write(buffer, bytes_read);
-        stream.flush();
+        if (capture)
+        {
+            captured += std::string_view{ buffer, bytes_read };
+        }
+        if (stream != nullptr)
+        {
+            stream->write(buffer, bytes_read);
+            stream->flush();
+        }
     }
     return captured;
 }
@@ -118,7 +121,7 @@ readFdToStream(const int fd, std::ostream & stream)
 }  // namespace
 
 roah::distb::utils::RunResult
-roah::distb::utils::run(const std::vector<std::u8string> & cmds)
+roah::distb::utils::run(const std::vector<std::u8string> & cmds, const RunArgs & args)
 {
     RunResult result;
 
@@ -200,8 +203,18 @@ roah::distb::utils::run(const std::vector<std::u8string> & cmds)
 
     // スレッドをスコープで囲み, スコープを抜けると自動的に join される.
     {
-        std::jthread stdoutThread{ [&]() { stdout_captured = readPipeToStream(stdout_read, std::cout); } };
-        std::jthread stderrThread{ [&]() { stderr_captured = readPipeToStream(stderr_read, std::cerr); } };
+        std::jthread stdoutThread{ [&]() {
+            stdout_captured = readPipeToStream(  //
+                stdout_read,
+                args.capture_stdout,
+                args.print_stdout ? &std::cout : nullptr);
+        } };
+        std::jthread stderrThread{ [&]() {
+            stderr_captured = readPipeToStream(  //
+                stderr_read,
+                args.capture_stderr,
+                args.print_stderr ? &std::cerr : nullptr);
+        } };
     }
 
     WaitForSingleObject(pi.hProcess, INFINITE);

@@ -11,7 +11,7 @@ class AppConfig
 {
 public:
     [[nodiscard]]
-    explicit AppConfig();
+    explicit AppConfig(std::filesystem::path executable_dir);
     ~AppConfig() noexcept;
 
     AppConfig(const AppConfig &) = delete;
@@ -32,6 +32,9 @@ public:
 
     void
     load();
+
+    const std::filesystem::path &
+    getExecutableDirectory() const noexcept;
 
     const std::filesystem::path &
     getBuildDirectory() const noexcept;
@@ -61,8 +64,10 @@ private:
     static std::filesystem::path
     _getDefaultInstallDirectory();
 
-    std::filesystem::path              file_path_;
+    const std::filesystem::path        executable_dir_;
+    const std::filesystem::path        default_search_path_;
     //
+    std::filesystem::path              file_path_;
     std::filesystem::path              build_dir_;
     std::filesystem::path              install_dir_;
     std::vector<std::filesystem::path> search_paths_;

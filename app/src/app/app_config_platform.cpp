@@ -1,6 +1,6 @@
 #include "app_config.hpp"
 //
-#include "errors.hpp"
+#include "roah/distb/errors.hpp"
 
 #include <filesystem>
 

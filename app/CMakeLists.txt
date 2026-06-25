@@ -1,17 +1,35 @@
 
+roah_add_library(distb-core
+    SOURCES
+        errors.cpp
+        logger.cpp
+        working_context.cpp
+
+    HEADERS
+        roah/distb/errors.hpp
+        roah/distb/logger.hpp
+        roah/distb/working_context.hpp
+
+    MSVC_HEADERS_FILTER_ROOT
+        roah/distb
+)
+
 roah_add_library(distb-utils
     LIBRARIES
         nlohmann_json::nlohmann_json
+        distb-config
 
     SOURCES
         utils/subprocess.cpp
         utils/option_value.cpp
+        utils/path.cpp
         utils/string_expander.cpp
         utils/string.cpp
 
     HEADERS
         roah/distb/utils/hash.hpp
         roah/distb/utils/option_value.hpp
+        roah/distb/utils/path.hpp
         roah/distb/utils/string_expander.hpp
         roah/distb/utils/string.hpp
         roah/distb/utils/subprocess.hpp
@@ -39,23 +57,29 @@ endif()
 
 roah_add_library(distb-config
     LIBRARIES
-        nlohmann_json
+        nlohmann_json::nlohmann_json
+        distb-core
         distb-utils
         
     SOURCES
+        config/condition.cpp
         config/dependency_spec.cpp
         config/library_entry.cpp
+        config/library.cpp
         config/step_def.cpp
 
-        config/impl/step_wget_impl.cpp
-        config/impl/step_wget_impl.hpp
+        config/impl/step_download_impl.cpp
+        config/impl/step_download_impl.hpp
+        config/impl/step_extract_impl.cpp
+        config/impl/step_extract_impl.hpp
 
     HEADERS
+        roah/distb/config/condition.hpp
         roah/distb/config/dependency_spec.hpp
         roah/distb/config/library_entry.hpp
         roah/distb/config/library.hpp
-        roah/distb/config/option_value.hpp
         roah/distb/config/step_def.hpp
+        roah/distb/config/variables.hpp
 
     MSVC_HEADERS_FILTER_ROOT
         roah/distb
@@ -65,6 +89,7 @@ roah_add_executable(distbuilder
     LIBRARIES
         CLI11::CLI11
         toml11::toml11
+        nlohmann_json::nlohmann_json
         distb-config
         distb-utils
 
@@ -76,10 +101,10 @@ roah_add_executable(distbuilder
         app/app_config.hpp
         app/app.cpp
         app/app.hpp
-        app/errors.cpp
-        app/errors.hpp
-        app/logger.cpp
-        app/logger.hpp
+        app/dependency.cpp
+        app/dependency.hpp
+        app/working_context_impl.cpp
+        app/working_context_impl.hpp
 )
 
 target_compile_definitions(distbuilder
@@ -87,4 +112,20 @@ target_compile_definitions(distbuilder
         $<$<PLATFORM_ID:Windows>:ROAH_ARCH_WIN32=1>
         $<$<PLATFORM_ID:MacOS>:ROAH_ARCH_MACOS=1>
         $<$<PLATFORM_ID:Linux>:ROAH_ARCH_LINUX=1>
+)
+
+set(ROAH_DISTB_CONF_PATH        "${CMAKE_CURRENT_BINARY_DIR}/distbuilder.conf")
+set(ROAH_DISTB_CONF_SEARCH_PATH "\"${CMAKE_SOURCE_DIR}/libs\"")
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/distbuilder.in.conf"
+    "${ROAH_DISTB_CONF_PATH}"
+    @ONLY
+)
+
+set_target_properties(distbuilder
+    PROPERTIES
+        VS_DEBUGGER_WORKING_DIRECTORY
+            "${CMAKE_SOURCE_DIR}/test_project"
+        VS_DEBUGGER_COMMAND_ARGUMENTS
+            "--config ${ROAH_DISTB_CONF_PATH} --verbose"
 )

@@ -1,10 +1,12 @@
 #include "roah/distb/config/library_entry.hpp"
 
-#include "impl/step_wget_impl.hpp"
+#include "roah/distb/config/step_def.hpp"
+#include "roah/distb/errors.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <cstdint>
+#include <unordered_map>
 
 roah::distb::config::LibraryEntry::LibraryEntry(std::string version)
     : version_{ std::move(version) }
@@ -21,32 +23,29 @@ roah::distb::config::LibraryEntry::~LibraryEntry() noexcept = default;
 void
 roah::distb::config::LibraryEntry::setBase(const LibraryEntry & base_entry)
 {
+    // copy
     this->options_      = base_entry.options_;
     this->dependencies_ = base_entry.dependencies_;
-    this->recipes_      = base_entry.recipes_;
+    this->order_        = base_entry.order_;
 
     this->steps_.clear();
     for (const auto & [key, ptr] : base_entry.steps_)
     {
-        if (ptr)
-        {
-            this->steps_.emplace(key, ptr->clone());
-        }
+        this->steps_.try_emplace(key, ptr.copy());
     }
 }
 
 void
 roah::distb::config::LibraryEntry::updateFromJson(const nlohmann::json & json)
 {
-    if (!json.is_object())
+    if (auto i_options = json.find("options"); i_options != json.end())
     {
-        return;
-    }
+        if (!i_options->is_object())
+        {
+            throw LibraryConfigError{ "Invalid 'options' field: expected an object." };
+        }
 
-    // options フィールド: マージ. null 値はキーを削除する.
-    if (json.contains("options") && json["options"].is_object())
-    {
-        for (const auto & [key, val] : json["options"].items())
+        for (const auto & [key, val] : i_options->items())
         {
             if (val.is_null())
             {
@@ -54,27 +53,39 @@ roah::distb::config::LibraryEntry::updateFromJson(const nlohmann::json & json)
             }
             else if (val.is_string())
             {
-                this->options_.insert_or_assign(key, OptionValue{ val.get<std::string>() });
+                this->options_[key] = val.get<std::string>();
             }
             else if (val.is_boolean())
             {
-                this->options_.insert_or_assign(key, OptionValue{ val.get<bool>() });
+                this->options_[key] = val.get<bool>();
             }
             else if (val.is_number_integer())
             {
-                this->options_.insert_or_assign(key, OptionValue{ val.get<std::int64_t>() });
+                this->options_[key] = val.get<std::int64_t>();
             }
             else if (val.is_number_float())
             {
-                this->options_.insert_or_assign(key, OptionValue{ val.get<double>() });
+                this->options_[key] = val.get<double>();
+            }
+            else
+            {
+                throw LibraryConfigError{
+                    "Invalid option value type for key '{}': expected string, boolean, integer, or float.",
+                    key
+                };
             }
         }
     }
 
     // dependencies フィールド: マージ. null 値はキーを削除する.
-    if (json.contains("dependencies") && json["dependencies"].is_object())
+    if (const auto i_deps = json.find("dependencies"); i_deps != json.end())
     {
-        for (const auto & [key, val] : json["dependencies"].items())
+        if (!i_deps->is_object())
+        {
+            throw LibraryConfigError{ "Invalid 'dependencies' field: expected an object." };
+        }
+
+        for (const auto & [key, val] : i_deps->items())
         {
             if (val.is_null())
             {
@@ -82,69 +93,72 @@ roah::distb::config::LibraryEntry::updateFromJson(const nlohmann::json & json)
             }
             else if (val.is_object())
             {
-                // name フィールドが明記されていればそれを使い, なければキー名を使う.
-                std::string dep_name = key;
-                if (val.contains("name") && val["name"].is_string())
+                auto & dep = this->dependencies_.try_emplace(key, key).first->second;
+                try
                 {
-                    dep_name = val["name"].get<std::string>();
-                }
-
-                auto it = this->dependencies_.find(key);
-                if (it == this->dependencies_.end())
-                {
-                    DependencySpec dep{ std::move(dep_name) };
                     dep.updateFromJson(val);
-                    this->dependencies_.emplace(key, std::move(dep));
                 }
-                else
+                catch (const LibraryConfigError & e)
                 {
-                    it->second.updateFromJson(val);
+                    // エラーを, 依存ライブラリ名を付加して再スローする.
+                    throw LibraryConfigError{ "Error in dependency spec for '{}': {}", key, e.what() };
                 }
             }
-        }
-    }
-
-    // recipes フィールド: 存在する場合は全体を上書き.
-    if (json.contains("recipes") && json["recipes"].is_array())
-    {
-        this->recipes_.clear();
-        for (const auto & r : json["recipes"])
-        {
-            if (r.is_string())
+            else
             {
-                this->recipes_.push_back(r.get<std::string>());
+                throw LibraryConfigError{ "Invalid dependency value type for '{}': expected an object or null.", key };
             }
         }
     }
 
     // steps フィールド: マージ. null 値はキーを削除する.
-    if (json.contains("steps") && json["steps"].is_object())
+    // order field は特殊
+    if (auto i_steps = json.find("steps"); i_steps != json.end())
     {
+        if (!i_steps->is_object())
+        {
+            throw LibraryConfigError{ "Invalid 'steps' field: expected an object." };
+        }
+
+        if (auto i_order = json.find("order"); i_order != json.end())
+        {
+            if (!i_order->is_array())
+            {
+                throw LibraryConfigError{ "Invalid 'order' field: expected an array." };
+            }
+
+            this->order_.clear();
+            for (const auto & v : *i_order)
+            {
+                if (v.is_string())
+                {
+                    this->order_.push_back(v.get<std::string>());
+                }
+                else
+                {
+                    throw LibraryConfigError{ "Invalid 'order' array element: expected a string." };
+                }
+            }
+        }
+
         for (const auto & [key, val] : json["steps"].items())
         {
+            if (key == "order")
+            {
+                continue;
+            }
+
             if (val.is_null())
             {
                 this->steps_.erase(key);
             }
             else if (val.is_object())
             {
-                if (!val.contains("cmd") || !val["cmd"].is_string())
-                {
-                    continue;
-                }
-                const auto cmd = val["cmd"].get<std::string>();
-                if (cmd == "wget")
-                {
-                    auto step = impl::StepWgetImpl::loadFromJson(val);
-                    if (step)
-                    {
-                        this->steps_.insert_or_assign(key, std::move(step));
-                    }
-                }
-                else
-                {
-                    // TODO: "subp", "cmake-configure", "cmake-build" などのステップは未実装.
-                }
+                this->steps_[key] = makeStepDefFromJson(val);
+            }
+            else
+            {
+                throw LibraryConfigError{ "Invalid step value type for key '{}': expected an object or null.", key };
             }
         }
     }
@@ -156,7 +170,7 @@ roah::distb::config::LibraryEntry::getVersion() const noexcept
     return this->version_;
 }
 
-const std::unordered_map<std::string, roah::distb::config::OptionValue> &
+const std::unordered_map<std::string, roah::distb::utils::OptionValue> &
 roah::distb::config::LibraryEntry::getOptions() const noexcept
 {
     return this->options_;
@@ -169,13 +183,56 @@ roah::distb::config::LibraryEntry::getDependencies() const noexcept
 }
 
 const std::vector<std::string> &
-roah::distb::config::LibraryEntry::getRecipes() const noexcept
+roah::distb::config::LibraryEntry::getStepOrder() const noexcept
 {
-    return this->recipes_;
+    return this->order_;
 }
 
-const std::unordered_map<std::string, std::unique_ptr<roah::distb::config::StepDef>> &
-roah::distb::config::LibraryEntry::getSteps() const noexcept
+// const std::unordered_map<std::string, std::unique_ptr<roah::distb::config::StepDef>> &
+// roah::distb::config::LibraryEntry::getSteps() const noexcept
+//{
+//     return this->steps_;
+// }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// StepDefHolder class implementation
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////
+roah::distb::config::LibraryEntry::StepDefHolder::StepDefHolder()
+    : instance_{ nullptr }
+    , ptr_{ nullptr }
+{}
+
+roah::distb::config::LibraryEntry::StepDefHolder::StepDefHolder(std::unique_ptr<StepDef> && instance) noexcept
+    : instance_{ std::move(instance) }
+    , ptr_{ this->instance_.get() }
+{}
+
+roah::distb::config::LibraryEntry::StepDefHolder::StepDefHolder(const StepDef * ptr) noexcept
+    : ptr_{ ptr }
+{}
+
+roah::distb::config::LibraryEntry::StepDefHolder::StepDefHolder(StepDefHolder &&) noexcept = default;
+
+roah::distb::config::LibraryEntry::StepDefHolder &
+roah::distb::config::LibraryEntry::StepDefHolder::operator=(StepDefHolder &&) noexcept
+    = default;
+
+roah::distb::config::LibraryEntry::StepDefHolder::~StepDefHolder() noexcept = default;
+
+const roah::distb::config::StepDef &
+roah::distb::config::LibraryEntry::StepDefHolder::ref() const
 {
-    return this->steps_;
+    if (this->ptr_ == nullptr)
+    {
+        throw std::runtime_error{ "null StepDef access." };
+    }
+    return *this->ptr_;
+}
+
+roah::distb::config::LibraryEntry::StepDefHolder
+roah::distb::config::LibraryEntry::StepDefHolder::copy() const noexcept
+{
+    return StepDefHolder{ this->ptr_ };
 }
