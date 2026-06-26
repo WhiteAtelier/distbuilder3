@@ -1,12 +1,17 @@
 #include "step_extract_impl.hpp"
 
 #include "roah/distb/errors.hpp"
+#include "roah/distb/logger.hpp"
+#include "roah/distb/utils/path.hpp"
+#include "roah/distb/utils/string.hpp"
 #include "roah/distb/utils/subprocess.hpp"
+#include "roah/distb/working_context.hpp"
 
 #include <nlohmann/json.hpp>
 
 roah::distb::config::impl::StepExtractImpl::StepExtractImpl()
     : StepDef{ kCmd }
+    , output_{ "." }  // = working directory
 {}
 
 roah::distb::config::impl::StepExtractImpl::StepExtractImpl(const StepExtractImpl &) = default;
@@ -26,40 +31,75 @@ roah::distb::config::impl::StepExtractImpl::~StepExtractImpl() noexcept = defaul
 void
 roah::distb::config::impl::StepExtractImpl::operator()(const WorkingContext & context) const
 {
-    // 入力, 出力のパスを生成する.
+    AppError::check(!this->input_.empty(), "Input is empty.");
+    AppError::check(!this->output_.empty(), "Output path is empty.");
+
+    logger.log("Extract: {} -> {}", this->input_, this->output_);
+
+    // Path を決定する
+    const auto & root   = context.getCurrentWorkingDirectory();
+    const auto   input  = utils::makeAbsolutePath(root / context.resolveString(this->input_));
+    const auto   output = utils::makeAbsolutePath(root / context.resolveString(this->output_));
+    logger.trace("Working directory: {}", root.u8string());
+    logger.trace("Resolved input path: {}", input.u8string());
+    logger.trace("Resolved output path: {}", output.u8string());
+
+    // ".." などで root の外に出ている可能性がある.
+    if (!utils::isSubDirectory(root, input))
+    {
+        throw LibraryConfigError{ "StepExtractImpl: input path is outside of the working directory." };
+    }
+    if (!utils::isSubDirectory(root, output))
+    {
+        throw LibraryConfigError{ "StepExtractImpl: output path is outside of the working directory." };
+    }
+
+    if (!std::filesystem::exists(input))
+    {
+        throw AppError{ "StepExtractImpl: input file does not exist: {}", input.u8string() };
+    }
+
+    if (root != output)
+    {
+        if (std::filesystem::exists(output))
+        {
+            logger.trace("Output directory already exists. Remove.");
+            std::filesystem::remove_all(output);
+        }
+        std::filesystem::create_directories(output);
+    }
+
+    logger.trace("Extracting...");
+
+    // 解凍する
+    std::vector<std::u8string> cmd{ {
+        u8"tar",
+        u8"-xf",
+        input.u8string(),
+        u8"-C",
+        output.u8string(),
+    } };
+
+    const auto result = utils::run(cmd,
+                                   {
+                                       .print_stdout = logger.isVerbose(),
+                                       .print_stderr = logger.isVerbose(),
+                                   });
+
+    AppError::check(result.exit_code == 0, "StepExtractImpl: tar exited with code {}.", result.exit_code);
+
+    logger.log("Extract Done.");
 }
 
 std::unique_ptr<roah::distb::config::StepDef>
 roah::distb::config::impl::StepExtractImpl::clone() const
 {
-    auto ret     = std::unique_ptr<StepExtractImpl>();
-    ret->input_  = this->input_;
-    ret->output_ = this->output_;
-    return ret;
+    return std::make_unique<StepExtractImpl>(*this);
 }
 
 void
 roah::distb::config::impl::StepExtractImpl::loadFromJson(const nlohmann::json & json)
 {
-    const auto get_fn = [&](const std::string & key, std::string & out) {
-        auto iter = json.find(key);
-        if (iter == json.end())
-        {
-            throw LibraryConfigError{ "Invalid 'extract' step definition: missing required field '{}'.", key };
-        }
-        if (!iter->is_string())
-        {
-            throw LibraryConfigError{ "Invalid 'extract' step definition: field '{}' must be a string.", key };
-        }
-        iter->get_to(out);
-    };
-
-    get_fn("input", this->input_);
-    get_fn("output", this->output_);
-}
-
-std::unique_ptr<roah::distb::config::StepDef>
-roah::distb::config::impl::StepExtractImplGenerator::operator()() const
-{
-    return std::make_unique<StepExtractImpl>();
+    this->_getStringFromJson(kCmd, json, "input", this->input_);
+    this->_getStringFromJson(kCmd, json, "output", this->output_);
 }

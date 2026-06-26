@@ -1,11 +1,15 @@
 #include "roah/distb/config/step_def.hpp"
 
+#include "impl/step_cmake_configure_impl.hpp"
+#include "impl/step_cmake_install_all_impl.hpp"
 #include "impl/step_download_impl.hpp"
 #include "impl/step_extract_impl.hpp"
 #include "roah/distb/errors.hpp"
 
 #include <nlohmann/json.hpp>
 
+#include <functional>
+#include <string>
 #include <unordered_map>
 
 roah::distb::config::StepDef::StepDef(const std::string_view cmd)
@@ -31,6 +35,24 @@ roah::distb::config::StepDef::getCmd() const noexcept
     return this->cmd_;
 }
 
+bool
+roah::distb::config::StepDef::_getStringFromJson(const std::string_view cmd,
+                                                 const nlohmann::json & json,
+                                                 const std::string &    key,
+                                                 std::string &          out)
+{
+    if (auto iter = json.find(key); iter != json.end())
+    {
+        if (!iter->is_string())
+        {
+            throw LibraryConfigError{ "Invalid '{}' step definition: field '{}' must be a string.", cmd, key };
+        }
+        iter->get_to(out);
+        return true;
+    }
+    return false;
+}
+
 namespace {
 template <typename T>
 T &
@@ -44,14 +66,16 @@ _getInstance()
 std::unique_ptr<roah::distb::config::StepDef>
 roah::distb::config::makeStepDefFromJson(const nlohmann::json & json)
 {
-#define DISTB_STEP(cls)                           \
-    {                                             \
-        cls::kCmd, _getInstance<cls::Generator>() \
+#define DISTB_STEP(cls)                                   \
+    {                                                     \
+        cls::kCmd, [] { return std::make_unique<cls>(); } \
     }
 
-    static std::unordered_map<std::string_view, std::reference_wrapper<const StepGenerator>> _generators{
+    static std::unordered_map<std::string_view, std::function<std::unique_ptr<StepDef>()>> _generators{
         DISTB_STEP(impl::StepDownloadImpl),
         DISTB_STEP(impl::StepExtractImpl),
+        DISTB_STEP(impl::StepCMakeConfigureImpl),
+        DISTB_STEP(impl::StepCMakeInstallAllImpl),
     };
 
     const auto i_cmd = json.find("cmd");
@@ -64,14 +88,12 @@ roah::distb::config::makeStepDefFromJson(const nlohmann::json & json)
         throw LibraryConfigError{ "Invalid 'cmd' field type in step definition: expected a string." };
     }
 
-    const auto cmd   = json.get<std::string>();
+    const auto cmd   = i_cmd->get<std::string>();
     const auto i_gen = _generators.find(cmd);
     if (i_gen == _generators.end())
     {
-        throw LibraryConfigError{ "Unknown step command '{}' for key '{}'.", cmd, key };
+        throw LibraryConfigError{ "Unknown step command '{}'.", cmd };
     }
 
-    auto ret = (i_gen->second).get()();
-    ret->loadFromJson(json);
-    return ret;
+    return (i_gen->second)();
 }

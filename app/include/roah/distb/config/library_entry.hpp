@@ -14,6 +14,10 @@
 #include <unordered_map>
 #include <vector>
 
+namespace roah::distb {
+class WorkingContext;
+}  // namespace roah::distb
+
 namespace roah::distb::config {
 
 /// @brief ライブラリの単一バージョンエントリを表すクラス.
@@ -52,8 +56,8 @@ public:
     const std::vector<std::string> &
     getStepOrder() const noexcept;
 
-    // const std::unordered_map<std::string, std::unique_ptr<StepDef>> &
-    // getSteps() const noexcept;
+    void
+    build(const WorkingContext & working_ctx) const;
 
 private:
     class StepDefHolder
@@ -70,6 +74,9 @@ private:
         StepDefHolder &
         operator=(const StepDefHolder &)
             = delete;
+
+        bool
+        operator!() const noexcept;
 
         const StepDef &
         ref() const;

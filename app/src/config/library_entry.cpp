@@ -120,7 +120,7 @@ roah::distb::config::LibraryEntry::updateFromJson(const nlohmann::json & json)
             throw LibraryConfigError{ "Invalid 'steps' field: expected an object." };
         }
 
-        if (auto i_order = json.find("order"); i_order != json.end())
+        if (auto i_order = i_steps->find("order"); i_order != i_steps->end())
         {
             if (!i_order->is_array())
             {
@@ -154,7 +154,21 @@ roah::distb::config::LibraryEntry::updateFromJson(const nlohmann::json & json)
             }
             else if (val.is_object())
             {
-                this->steps_[key] = makeStepDefFromJson(val);
+                // TODO: ここ, key がすでに設定されていたら update する挙動にする.
+                auto & step = this->steps_.try_emplace(key).first->second;
+                if (!step)
+                {
+                    auto new_instance = makeStepDefFromJson(val);
+                    new_instance->loadFromJson(val);
+                    step = std::move(new_instance);
+                }
+                else
+                {
+                    // override する必要があるので, clone する
+                    auto cloned_instance = step.ref().clone();
+                    cloned_instance->loadFromJson(val);
+                    step = std::move(cloned_instance);
+                }
             }
             else
             {
@@ -188,11 +202,15 @@ roah::distb::config::LibraryEntry::getStepOrder() const noexcept
     return this->order_;
 }
 
-// const std::unordered_map<std::string, std::unique_ptr<roah::distb::config::StepDef>> &
-// roah::distb::config::LibraryEntry::getSteps() const noexcept
-//{
-//     return this->steps_;
-// }
+void
+roah::distb::config::LibraryEntry::build(const WorkingContext & working_ctx) const
+{
+    for (const auto & step_name : this->order_)
+    {
+        const auto & step = this->steps_.at(step_name);
+        step.ref()(working_ctx);
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -220,6 +238,12 @@ roah::distb::config::LibraryEntry::StepDefHolder::operator=(StepDefHolder &&) no
     = default;
 
 roah::distb::config::LibraryEntry::StepDefHolder::~StepDefHolder() noexcept = default;
+
+bool
+roah::distb::config::LibraryEntry::StepDefHolder::operator!() const noexcept
+{
+    return this->ptr_ == nullptr;
+}
 
 const roah::distb::config::StepDef &
 roah::distb::config::LibraryEntry::StepDefHolder::ref() const

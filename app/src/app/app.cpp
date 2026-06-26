@@ -2,6 +2,7 @@
 
 #include "app_config.hpp"
 #include "dependency.hpp"
+#include "working_context_impl.hpp"
 //
 #include "roah/distb/errors.hpp"
 #include "roah/distb/logger.hpp"
@@ -154,6 +155,9 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
     {
         logger.log("Dependency: {}.{} (version: {})", dep.getAuthor(), dep.getRepo(), dep.getVersion());
     }
+
+    // build
+    this->_buildDeps();
 
     return 0;
 }
@@ -412,11 +416,38 @@ roah::distb::app::App::Impl_::_buildDeps()
     {
         completed = true;
 
-        for (const auto & dep : this->all_dependencies_ | std::ranges::views::values)
+        for (auto & [name, dep] : this->all_dependencies_)
         {
-            const auto & le = dep.getLibraryEntityConfigOfSelectedVersion();
-            le.getDependencies();
-            //
+            if (builts.contains(name))
+            {
+                continue;
+            }
+
+            const auto & le        = dep.getLibraryEntityConfigOfSelectedVersion();
+            const auto & dep_deps  = le.getDependencies();
+            bool         can_build = true;
+            for (const auto & child_dep : dep_deps | std::ranges::views::values)
+            {
+                if (!builts.contains(child_dep.getName()))
+                {
+                    can_build = false;
+                    break;
+                }
+            }
+
+            if (can_build)
+            {
+                logger.log("Building dependency: {}.{} (version: {})",
+                           dep.getAuthor(),
+                           dep.getRepo(),
+                           dep.getVersion());
+
+                dep.build(this->app_config_, this->all_dependencies_);
+            }
+            else
+            {
+                completed = false;
+            }
         }
     }
 }

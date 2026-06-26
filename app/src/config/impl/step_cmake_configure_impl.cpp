@@ -1,0 +1,184 @@
+#include "step_cmake_configure_impl.hpp"
+
+#include "roah/distb/errors.hpp"
+#include "roah/distb/logger.hpp"
+#include "roah/distb/utils/path.hpp"
+#include "roah/distb/utils/string.hpp"
+#include "roah/distb/utils/subprocess.hpp"
+#include "roah/distb/working_context.hpp"
+
+#include <nlohmann/json.hpp>
+
+#include <string>
+#include <vector>
+
+roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl()
+    : StepDef{ kCmd }
+{}
+
+roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl(const StepCMakeConfigureImpl &) = default;
+
+roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl(StepCMakeConfigureImpl &&) noexcept = default;
+
+roah::distb::config::impl::StepCMakeConfigureImpl &
+roah::distb::config::impl::StepCMakeConfigureImpl::operator=(const StepCMakeConfigureImpl &)
+    = default;
+
+roah::distb::config::impl::StepCMakeConfigureImpl &
+roah::distb::config::impl::StepCMakeConfigureImpl::operator=(StepCMakeConfigureImpl &&) noexcept
+    = default;
+
+roah::distb::config::impl::StepCMakeConfigureImpl::~StepCMakeConfigureImpl() noexcept = default;
+
+void
+roah::distb::config::impl::StepCMakeConfigureImpl::operator()(const WorkingContext & context) const
+{
+    AppError::check(!this->src_dir_.empty(), "Source directory is empty.");
+    AppError::check(!this->build_dir_.empty(), "Build directory is empty.");
+
+    logger.log("CMake Configure: {} -> {}", this->src_dir_, this->build_dir_);
+
+    // Path を決定する
+    const auto & root      = context.getCurrentWorkingDirectory();
+    const auto   src_dir   = utils::makeAbsolutePath(root / context.resolveString(this->src_dir_));
+    const auto   build_dir = utils::makeAbsolutePath(root / context.resolveString(this->build_dir_));
+    logger.trace("Working directory: {}", root.u8string());
+    logger.trace("Resolved source directory path: {}", src_dir.u8string());
+    logger.trace("Resolved build directory path: {}", build_dir.u8string());
+
+    // ".." などで root の外に出ている可能性がある.
+    if (!utils::isSubDirectory(root, src_dir))
+    {
+        throw LibraryConfigError{
+            "StepCMakeConfigureImpl: source directory path is outside of the working directory."
+        };
+    }
+    if (!utils::isSubDirectory(root, build_dir))
+    {
+        throw LibraryConfigError{ "StepCMakeConfigureImpl: build directory path is outside of the working directory." };
+    }
+
+    // 同じディレクトリは指定できない.
+    if (src_dir == build_dir)
+    {
+        throw LibraryConfigError{ "StepCMakeConfigureImpl: source directory and build directory must be different." };
+    }
+
+    // build_dir は削除されてしまう, build_dir の中に src_dir があるならエラーにする.
+    if (utils::isSubDirectory(build_dir, src_dir))
+    {
+        throw LibraryConfigError{
+            "StepCMakeConfigureImpl: build directory must not be a subdirectory of source directory."
+        };
+    }
+
+    // build dir 消す
+    if (std::filesystem::exists(build_dir))
+    {
+        logger.trace("Removing existing build directory.");
+        std::filesystem::remove_all(build_dir);
+    }
+
+    // src dir あるか
+    if (!std::filesystem::exists(src_dir))
+    {
+        throw AppError{ "StepCMakeConfigureImpl: source directory does not exist: {}", src_dir.u8string() };
+    }
+
+    // command line args
+    std::vector<std::u8string> cmd{ {
+        utils::toU8String(context.resolveString("${cmakeBin}")),  //
+        u8"-S",
+        src_dir.u8string(),  // source dir
+        u8"-B",
+        build_dir.u8string(),  // build dir
+    } };
+
+    if (const auto generator = context.resolveString("${generator}"); !generator.empty())
+    {
+        cmd.emplace_back(u8"-G");
+        cmd.emplace_back(utils::toU8String(generator));
+    }
+    if (const auto arch = context.resolveString("${arch}"); !arch.empty())
+    {
+        cmd.emplace_back(u8"-A");
+        cmd.emplace_back(utils::toU8String(arch));
+    }
+    for (const auto & arg : this->args_)
+    {
+        cmd.emplace_back(utils::toU8String(context.resolveString(arg)));
+    }
+    cmd.emplace_back(u8"-DCMAKE_DEBUG_POSTFIX=d");
+    cmd.emplace_back(u8"-DCMAKE_CONFIGURATION_TYPES=Debug;Release");
+
+    // Dependencies
+    std::u8string deps;
+    for (const auto & [lib_name, lib_hash] : context.getDependencies())
+    {
+        deps += utils::toU8String(context.resolveString("${installRootDir}/" + lib_hash + ";"));
+    }
+    if (!deps.empty())
+    {
+        cmd.emplace_back(u8"-DCMAKE_PREFIX_PATH=" + deps);
+    }
+
+    // cmake execute
+    logger.trace("Executing CMake Configure...");
+    if (logger.isVerbose())
+    {
+        std::u8string cmdline;
+        for (const auto & arg : cmd)
+        {
+            const auto needs_dq = utils::contains(arg, u8' ');
+            if (needs_dq)
+            {
+                cmdline += u8"\"" + arg + u8"\" ";
+            }
+            else
+            {
+                cmdline += arg + u8" ";
+            }
+        }
+        logger.trace("-- CMake command: {}", cmdline);
+    }
+
+    const auto ret = utils::run(cmd,
+                                {
+                                    .capture_stdout = false,
+                                    .capture_stderr = false,
+                                });
+    AppError::check(ret.exit_code == 0, "CMake configure failed with exit code {}.", ret.exit_code);
+
+    logger.log("CMake configure completed successfully.");
+}
+
+std::unique_ptr<roah::distb::config::StepDef>
+roah::distb::config::impl::StepCMakeConfigureImpl::clone() const
+{
+    return std::make_unique<StepCMakeConfigureImpl>(*this);
+}
+
+void
+roah::distb::config::impl::StepCMakeConfigureImpl::loadFromJson(const nlohmann::json & json)
+{
+    this->_getStringFromJson(kCmd, json, "srcDir", this->src_dir_);
+    this->_getStringFromJson(kCmd, json, "buildDir", this->build_dir_);
+
+    if (const auto i_args = json.find("args"); i_args != json.end())
+    {
+        if (!i_args->is_array())
+        {
+            throw LibraryConfigError{ "Invalid 'args' field: expected an array." };
+        }
+
+        this->args_.clear();
+        for (const auto & arg : *i_args)
+        {
+            if (!arg.is_string())
+            {
+                throw LibraryConfigError{ "Invalid 'args' field: expected an array of strings." };
+            }
+            this->args_.emplace_back(arg.get<std::string>());
+        }
+    }
+}

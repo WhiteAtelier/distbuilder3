@@ -45,17 +45,15 @@ public:
     std::string_view
     getCmd() const noexcept;
 
+protected:
+    static bool
+    _getStringFromJson(const std::string_view cmd,
+                       const nlohmann::json & json,
+                       const std::string &    key,
+                       std::string &          out);
+
 private:
     std::string_view cmd_;
-};
-
-struct StepGenerator
-{
-    StepGenerator()          = default;
-    virtual ~StepGenerator() = default;
-
-    virtual std::unique_ptr<StepDef>
-    operator()() const = 0;
 };
 
 std::unique_ptr<StepDef>

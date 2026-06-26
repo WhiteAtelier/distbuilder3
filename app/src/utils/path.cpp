@@ -15,9 +15,9 @@ roah::distb::utils::isSubDirectory(const std::filesystem::path & parent,
     {
         return when_same;
     }
-    if (child.has_parent_path())
+    if (const auto child_parent = child.parent_path(); child_parent != child)
     {
-        return isSubDirectory(parent, child.parent_path(), true);
+        return isSubDirectory(parent, child_parent, true);
     }
     return false;
 }

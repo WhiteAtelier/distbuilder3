@@ -19,7 +19,7 @@
             "steps": {
                 "order": ["download", "extract", "configure", "build"],
                 "download": {
-                    "cmd": "wget",
+                    "cmd": "download",
                     "url": "https://github.com/gabime/spdlog/archive/refs/tags/${version}.zip",
                     "output": "src.zip",
                     "hash": "076f3b4d452b95433083bcc66d07f79addba2d3fcb2b9177abeb7367d47aefbb"

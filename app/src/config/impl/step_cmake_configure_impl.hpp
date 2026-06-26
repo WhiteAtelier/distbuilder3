@@ -1,0 +1,47 @@
+#ifndef ROAH_DISTB_CONFIG_IMPL_STEP_CMAKE_CONFIGURE_IMPL_HPP
+#define ROAH_DISTB_CONFIG_IMPL_STEP_CMAKE_CONFIGURE_IMPL_HPP
+
+#include "roah/distb/config/step_def.hpp"
+
+#include <nlohmann/json_fwd.hpp>
+
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <string_view>
+
+namespace roah::distb::config::impl {
+
+class StepCMakeConfigureImpl final : public StepDef
+{
+public:
+    constexpr static std::string_view kCmd = "cmake-configure";
+
+    StepCMakeConfigureImpl();
+
+    StepCMakeConfigureImpl(const StepCMakeConfigureImpl &);
+    StepCMakeConfigureImpl(StepCMakeConfigureImpl &&) noexcept;
+    StepCMakeConfigureImpl &
+    operator=(const StepCMakeConfigureImpl &);
+    StepCMakeConfigureImpl &
+    operator=(StepCMakeConfigureImpl &&) noexcept;
+    ~StepCMakeConfigureImpl() noexcept override;
+
+    void
+    operator()(const WorkingContext & context) const override;
+
+    std::unique_ptr<StepDef>
+    clone() const override;
+
+    void
+    loadFromJson(const nlohmann::json & json) override;
+
+private:
+    std::string              src_dir_;
+    std::string              build_dir_;
+    std::vector<std::string> args_;
+};
+
+}  // namespace roah::distb::config::impl
+
+#endif  // ROAH_DISTB_CONFIG_IMPL_STEP_WGET_IMPL_HPP

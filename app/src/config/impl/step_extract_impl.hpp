@@ -12,16 +12,9 @@
 
 namespace roah::distb::config::impl {
 
-struct StepExtractImplGenerator final : public StepGenerator
-{
-    std::unique_ptr<StepDef>
-    operator()() const override;
-};
-
 class StepExtractImpl final : public StepDef
 {
 public:
-    using Generator                        = StepExtractImplGenerator;
     constexpr static std::string_view kCmd = "extract";
 
     StepExtractImpl();

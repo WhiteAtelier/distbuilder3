@@ -35,7 +35,7 @@ roah::distb::config::Library::loadFromJson(std::ifstream & ifst)
 
     try
     {
-        const auto j_root = nlohmann::json::parse(ifst);
+        const auto j_root = nlohmann::json::parse(ifst, nullptr, true, true);
         if (const auto i_entries = j_root.find("entries"); i_entries != j_root.end())
         {
             if (!i_entries->is_array())

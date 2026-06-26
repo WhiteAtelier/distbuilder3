@@ -50,8 +50,12 @@ public:
 
     void
     addData(const void * data, std::size_t size);
+
+    std::vector<std::byte>
+    getHashBinary() const;
+
     std::string
-    getHash() const;
+    getHashAsHexString() const;
 
 private:
     BCRYPT_ALG_HANDLE  alg_handle_  = nullptr;
@@ -59,6 +63,8 @@ private:
     // BCrypt がハッシュオブジェクトを保持するためのバッファ.
     std::vector<BYTE>  hash_object_;
 };
+
+}  // namespace roah::distb::utils
 
 // ============================================================
 // Impl (Windows) 実装
@@ -108,8 +114,8 @@ roah::distb::utils::SHA256Hash::Impl::addData(const void * const data, const std
     checkBcrypt(BCryptHashData(this->hash_handle_, buf.data(), static_cast<ULONG>(size), 0), "BCryptHashData failed");
 }
 
-std::string
-roah::distb::utils::SHA256Hash::Impl::getHash() const
+std::vector<std::byte>
+roah::distb::utils::SHA256Hash::Impl::getHashBinary() const
 {
     // 内部状態を変化させないために, ハッシュを複製してから Finish する.
     std::vector<BYTE>  dup_obj(this->hash_object_.size());
@@ -129,16 +135,26 @@ roah::distb::utils::SHA256Hash::Impl::getHash() const
                                   0),
                 "BCryptGetProperty(BCRYPT_HASH_LENGTH) failed");
 
-    std::vector<BYTE> hash_bytes(hash_len);
-    const NTSTATUS    finish_status = BCryptFinishHash(dup_handle, hash_bytes.data(), hash_len, 0);
+    std::vector<std::byte> hash_bytes(static_cast<std::size_t>(hash_len));
+    const NTSTATUS         finish_status = BCryptFinishHash(dup_handle,  //
+                                                    reinterpret_cast<BYTE *>(hash_bytes.data()),
+                                                    hash_len,
+                                                    0);
     BCryptDestroyHash(dup_handle);
     checkBcrypt(finish_status, "BCryptFinishHash failed");
+    return hash_bytes;
+}
+
+std::string
+roah::distb::utils::SHA256Hash::Impl::getHashAsHexString() const
+{
+    const auto hash_bytes = this->getHashBinary();
 
     // 16 進数文字列に変換する.
     std::ostringstream oss;
     for (const auto b : hash_bytes)
     {
-        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(b);
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(b);
     }
     return oss.str();
 }
@@ -165,10 +181,14 @@ roah::distb::utils::SHA256Hash::addData(const void * const data, const std::size
     this->impl_->addData(data, size);
 }
 
-std::string
-roah::distb::utils::SHA256Hash::getHash() const
+std::vector<std::byte>
+roah::distb::utils::SHA256Hash::getHashBinary() const
 {
-    return this->impl_->getHash();
+    return this->impl_->getHashBinary();
 }
 
-}  // namespace roah::distb::utils
+std::string
+roah::distb::utils::SHA256Hash::getHashAsHexString() const
+{
+    return this->impl_->getHashAsHexString();
+}

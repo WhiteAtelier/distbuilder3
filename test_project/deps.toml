@@ -1,4 +1,10 @@
 
-[gabime.spdlog]
+# [gabime.spdlog]
 
-hoge = "foobar"
+# hoge = "foobar"
+
+[CLIUtils.CLI11]
+# version = "${latest}"
+
+[madler.zlib]
+# version = "${latest}"

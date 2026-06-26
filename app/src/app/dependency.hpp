@@ -52,6 +52,9 @@ public:
     utils::OptionValue &
     setOption(std::string key, T value);
 
+    const std::unordered_map<std::string, utils::OptionValue> &
+    getOptions() const noexcept;
+
     void
     loadLibraryConfig(const AppConfig & app_config);
 
@@ -61,14 +64,24 @@ public:
     const config::LibraryEntry &
     getLibraryEntityConfigOfSelectedVersion() const;
 
+    const std::string &
+    getStateHash() const noexcept;
+
+    void
+    build(const AppConfig & app_config, const std::unordered_map<std::string, Dependency> & all_dependencies);
+
 private:
     bool
     _loadLibraryConfig(const std::filesystem::path & path);
+
+    void
+    _calculateStateHash(const std::unordered_map<std::string, Dependency> & all_dependencies);
 
     std::string                                         version_;
     std::unordered_map<std::string, utils::OptionValue> options_;
     config::Library                                     library_conf_;
     bool                                                library_conf_loaded_;
+    std::string                                         state_hash_;
 };
 
 }  // namespace roah::distb::app

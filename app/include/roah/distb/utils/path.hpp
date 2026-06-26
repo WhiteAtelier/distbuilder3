@@ -1,5 +1,5 @@
-#ifndef ROAH_DISTB_UTILS_STRING_HPP
-#define ROAH_DISTB_UTILS_STRING_HPP
+#ifndef ROAH_DISTB_UTILS_PATH_HPP
+#define ROAH_DISTB_UTILS_PATH_HPP
 
 #include <filesystem>
 

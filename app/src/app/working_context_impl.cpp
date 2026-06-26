@@ -2,10 +2,13 @@
 
 #include "roah/distb/utils/string_expander.hpp"
 
-roah::distb::app::WorkingContextImpl::WorkingContextImpl(std::filesystem::path     current_working_path,
-                                                         const config::Variables & variables)
+roah::distb::app::WorkingContextImpl::WorkingContextImpl(
+    std::filesystem::path                                current_working_path,
+    const config::Variables &                            variables,
+    const std::unordered_map<std::string, std::string> & dependencies)
     : current_working_path_{ std::move(current_working_path) }
     , variables_{ variables }
+    , dependencies_{ dependencies }
 {}
 
 roah::distb::app::WorkingContextImpl::~WorkingContextImpl() noexcept = default;
@@ -22,4 +25,10 @@ roah::distb::app::WorkingContextImpl::resolveString(const std::string & str) con
     std::string ret;
     utils::expandTemplate(str, this->variables_, ret);
     return ret;
+}
+
+const std::unordered_map<std::string, std::string> &
+roah::distb::app::WorkingContextImpl::getDependencies() const
+{
+    return this->dependencies_;
 }

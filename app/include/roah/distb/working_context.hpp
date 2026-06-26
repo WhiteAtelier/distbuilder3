@@ -2,6 +2,7 @@
 #define ROAH_DISTB_WORKING_CONTEXT_HPP
 
 #include <filesystem>
+#include <unordered_map>
 
 namespace roah::distb {
 
@@ -19,6 +20,11 @@ public:
 
     virtual std::string
     resolveString(const std::string & str) const
+        = 0;
+
+    // [libraryName]: [hash]
+    virtual const std::unordered_map<std::string, std::string> &
+    getDependencies() const
         = 0;
 };
 

@@ -20,6 +20,7 @@ roah_add_library(distb-utils
         distb-config
 
     SOURCES
+        utils/base32.cpp
         utils/subprocess.cpp
         utils/option_value.cpp
         utils/path.cpp
@@ -27,6 +28,7 @@ roah_add_library(distb-utils
         utils/string.cpp
 
     HEADERS
+        roah/distb/utils/base32.hpp
         roah/distb/utils/hash.hpp
         roah/distb/utils/option_value.hpp
         roah/distb/utils/path.hpp
@@ -35,6 +37,7 @@ roah_add_library(distb-utils
         roah/distb/utils/subprocess.hpp
 
     TESTS
+        utils/base32.cpp
         utils/hash.cpp
         utils/option_value.cpp
         utils/string_expander.cpp
@@ -68,6 +71,10 @@ roah_add_library(distb-config
         config/library.cpp
         config/step_def.cpp
 
+        config/impl/step_cmake_configure_impl.cpp
+        config/impl/step_cmake_configure_impl.hpp
+        config/impl/step_cmake_install_all_impl.cpp
+        config/impl/step_cmake_install_all_impl.hpp
         config/impl/step_download_impl.cpp
         config/impl/step_download_impl.hpp
         config/impl/step_extract_impl.cpp

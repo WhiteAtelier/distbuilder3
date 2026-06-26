@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace roah::distb::utils {
 
@@ -17,24 +18,32 @@ class SHA256Hash
 {
 public:
     SHA256Hash();
-    SHA256Hash(const SHA256Hash&) = delete;
-    SHA256Hash(SHA256Hash&&) noexcept;
-    SHA256Hash& operator=(const SHA256Hash&) = delete;
-    SHA256Hash& operator=(SHA256Hash&&) noexcept;
+    SHA256Hash(const SHA256Hash &) = delete;
+    SHA256Hash(SHA256Hash &&) noexcept;
+    SHA256Hash &
+    operator=(const SHA256Hash &)
+        = delete;
+    SHA256Hash &
+    operator=(SHA256Hash &&) noexcept;
     ~SHA256Hash();
 
     // データを追加してハッシュを更新する.
-    void addData(const void* const data, const std::size_t size);
+    void
+    addData(const void * const data, const std::size_t size);
+
+    std::vector<std::byte>
+    getHashBinary() const;
 
     // 現在のハッシュ値を 16 進数文字列として返す.
     // この呼び出しによって内部状態は変化しない.
-    std::string getHash() const;
+    std::string
+    getHashAsHexString() const;
 
 private:
     class Impl;
     std::unique_ptr<Impl> impl_;
 };
 
-} // namespace roah::distb::utils
+}  // namespace roah::distb::utils
 
-#endif // ROAH_DISTB_UTILS_HASH_HPP
+#endif  // ROAH_DISTB_UTILS_HASH_HPP

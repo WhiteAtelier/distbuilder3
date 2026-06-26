@@ -13,16 +13,9 @@
 
 namespace roah::distb::config::impl {
 
-struct StepDownloadImplGenerator final : public StepGenerator
-{
-    std::unique_ptr<StepDef>
-    operator()() const override;
-};
-
 class StepDownloadImpl final : public StepDef
 {
 public:
-    using Generator                        = StepDownloadImplGenerator;
     constexpr static std::string_view kCmd = "download";
 
     StepDownloadImpl();
@@ -40,7 +33,6 @@ public:
     void
     operator()(const WorkingContext & context) const override;
 
-    // 自身のディープコピーを生成して返す.
     std::unique_ptr<StepDef>
     clone() const override;
 
@@ -54,7 +46,7 @@ public:
     getOutput() const noexcept;
 
     const std::string &
-    getHash() const noexcept;
+    getHashAsHexString() const noexcept;
 
 private:
     std::string
