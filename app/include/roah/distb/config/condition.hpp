@@ -13,21 +13,21 @@ namespace roah::distb::config {
 class Condition
 {
 protected:
-    Condition(std::string op_name);
+    Condition(const std::string_view op_name);
 
 public:
-    ~Condition() = default;
+    virtual ~Condition() noexcept;
 
-    Condition(const Condition &)     = delete;
-    Condition(Condition &&) noexcept = delete;
+    Condition(const Condition &) = delete;
+    Condition(Condition &&)      = delete;
     Condition &
     operator=(const Condition &)
-        = default;
+        = delete;
     Condition &
     operator=(Condition &&) noexcept
         = delete;
 
-    const std::string &
+    std::string_view
     getOpName() const noexcept;
 
     virtual void
@@ -38,19 +38,12 @@ public:
     eval(const Variables & variables) const
         = 0;
 
-    virtual Condition
-    clone() const
-        = 0;
-
 private:
-    std::string op_name_;
+    std::string_view op_name_;
 };
 
-struct ConditionGenerator
-{
-    virtual std::unique_ptr<Condition>
-    operator()() const = 0;
-};
+std::unique_ptr<Condition>
+makeConditionFromJson(const nlohmann::json & json);
 
 }  // namespace roah::distb::config
 

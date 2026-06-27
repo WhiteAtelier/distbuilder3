@@ -28,6 +28,9 @@ public:
     const std::unordered_map<std::string, std::string> &
     getDependencies() const override;
 
+    bool
+    evalCondition(const config::Condition & condition) const override;
+
 private:
     std::filesystem::path                                current_working_path_;
     const config::Variables &                            variables_;

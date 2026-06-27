@@ -1,5 +1,6 @@
 #include "working_context_impl.hpp"
 
+#include "roah/distb/config/condition.hpp"
 #include "roah/distb/utils/string_expander.hpp"
 
 roah::distb::app::WorkingContextImpl::WorkingContextImpl(
@@ -31,4 +32,10 @@ const std::unordered_map<std::string, std::string> &
 roah::distb::app::WorkingContextImpl::getDependencies() const
 {
     return this->dependencies_;
+}
+
+bool
+roah::distb::app::WorkingContextImpl::evalCondition(const config::Condition & condition) const
+{
+    return condition.eval(this->variables_);
 }

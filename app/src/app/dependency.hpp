@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace roah::distb::config {
 class Library;
@@ -68,6 +69,12 @@ public:
     const std::string &
     getStateHash() const noexcept;
 
+    config::Variables
+    generateVariables(const AppConfig & app_config) const;
+
+    const std::unordered_set<std::string> &
+    getResolvedDependencies() const noexcept;
+
     void
     build(const AppConfig &                                   app_config,
           const bool                                          dryrun,
@@ -79,7 +86,7 @@ public:
 
 private:
     bool
-    _loadLibraryConfig(const std::filesystem::path & path);
+    _loadLibraryConfig(const std::filesystem::path & path, const AppConfig & app_config);
 
     void
     _calculateStateHash(const std::unordered_map<std::string, Dependency> & all_dependencies);
@@ -88,6 +95,7 @@ private:
     std::map<std::string, utils::OptionValue> options_;
     config::Library                           library_conf_;
     bool                                      library_conf_loaded_;
+    std::unordered_set<std::string>           resolved_dependencies_;
     std::string                               state_hash_;
 };
 

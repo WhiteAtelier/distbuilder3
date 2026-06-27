@@ -185,8 +185,8 @@ roah::distb::app::Dependency::loadLibraryConfig(const AppConfig & app_config)
     const auto   file_name    = this->getAuthor() + "." + this->getRepo();
     for (const auto & path : search_paths)
     {
-        if (this->_loadLibraryConfig(path / (file_name + ".jsonc"))
-            || this->_loadLibraryConfig(path / (file_name + ".json")))
+        if (this->_loadLibraryConfig(path / (file_name + ".jsonc"), app_config)
+            || this->_loadLibraryConfig(path / (file_name + ".json"), app_config))
         {
             this->library_conf_loaded_ = true;
             return;
@@ -196,7 +196,7 @@ roah::distb::app::Dependency::loadLibraryConfig(const AppConfig & app_config)
 }
 
 bool
-roah::distb::app::Dependency::_loadLibraryConfig(const std::filesystem::path & path)
+roah::distb::app::Dependency::_loadLibraryConfig(const std::filesystem::path & path, const AppConfig & app_config)
 {
     std::ifstream ifst{ path };
     if (ifst)
@@ -213,6 +213,27 @@ roah::distb::app::Dependency::_loadLibraryConfig(const std::filesystem::path & p
             }
             this->version_ = versions.back();
         }
+
+        // option をマージする
+        const auto & le = this->getLibraryEntityConfigOfSelectedVersion();
+        for (const auto & [name, base_option] : le.getOptions())
+        {
+            // すでに存在する場合は上書きしない.
+            this->options_.try_emplace(name, base_option);
+        }
+
+        const auto variables = this->generateVariables(app_config);
+
+        // そのバージョンでの dependencies をキューに追加する.
+        const auto & child_deps = le.getDependencies();
+        for (const auto & child_dep : child_deps | std::ranges::views::values)
+        {
+            if (child_dep.evalCondition(variables))
+            {
+                this->resolved_dependencies_.emplace(child_dep.getName());
+            }
+        }
+
         return true;
     }
     return false;
@@ -242,20 +263,35 @@ roah::distb::app::Dependency::getStateHash() const noexcept
     return this->state_hash_;
 }
 
+roah::distb::config::Variables
+roah::distb::app::Dependency::generateVariables(const AppConfig & app_config) const
+{
+    roah::distb::config::Variables variables;
+    variables["version"]      = this->version_;
+    variables["generator"]    = utils::toString(app_config.getGenerator());
+    variables["arch"]         = utils::toString(app_config.getArchitecture());
+    variables["architecture"] = utils::toString(app_config.getArchitecture());
+
+    // -- option は "option." の名前空間に入れる
+    for (const auto & [key, value] : this->options_)
+    {
+        variables["options." + key] = value;
+    }
+    return variables;
+}
+
+const std::unordered_set<std::string> &
+roah::distb::app::Dependency::getResolvedDependencies() const noexcept
+{
+    return this->resolved_dependencies_;
+}
+
 void
 roah::distb::app::Dependency::build(const AppConfig &                                   app_config,
                                     const bool                                          dryrun,
                                     const bool                                          force_build,
                                     const std::unordered_map<std::string, Dependency> & all_dependencies)
 {
-    // option をマージする
-    for (const auto & le = this->getLibraryEntityConfigOfSelectedVersion();
-         const auto & [name, base_option] : le.getOptions())
-    {
-        // すでに存在する場合は上書きしない.
-        this->options_.try_emplace(name, base_option);
-    }
-
     // ビルドできる状態であるとする.
     // まず state hash を計算する.
     this->_calculateStateHash(all_dependencies);
@@ -296,29 +332,19 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     }
 
     // variables 作る
-    config::Variables variables;
-    variables["version"]        = this->version_;
+    auto variables              = this->generateVariables(app_config);
     variables["installRootDir"] = utils::toString(app_config.getInstallDirectory().u8string());
     variables["buildRootDir"]   = utils::toString(app_config.getBuildDirectory().u8string());
-    variables["generator"]      = utils::toString(app_config.getGenerator());
-    variables["arch"]           = utils::toString(app_config.getArchitecture());
-    variables["architecture"]   = utils::toString(app_config.getArchitecture());
     variables["cmakeBin"]       = utils::toString(app_config.getCMakeExecutable());
-
-    variables["workingDir"] = utils::toString(build_root.u8string());
-    variables["installDir"] = utils::toString(install_dir.u8string());
-
-    // -- option は "option." の名前空間に入れる
-    for (const auto & [key, value] : this->options_)
-    {
-        variables["options." + key] = value;
-    }
+    variables["workingDir"]     = utils::toString(build_root.u8string());
+    variables["installDir"]     = utils::toString(install_dir.u8string());
 
     std::unordered_map<std::string, std::string> dependencies;
-    for (const auto & [name, req_dep] : le.getDependencies())
+    for (const auto & name : this->resolved_dependencies_)
     {
         // 依存のバージョン一致を判定する.
-        const auto & dep = all_dependencies.at(name);
+        const auto & dep     = all_dependencies.at(name);
+        const auto & req_dep = le.getDependencies().at(name);
         if (!dep.checkVersionRange(req_dep.getRequiredVersionRange()))
         {
             std::string version_range_str;
@@ -416,9 +442,8 @@ roah::distb::app::Dependency::_calculateStateHash(const std::unordered_map<std::
         state << key << "=" << static_cast<std::string>(value) << std::endl;
     }
 
-    const auto & le = this->getLibraryEntityConfigOfSelectedVersion();
     state << "[dependencies]" << std::endl;
-    for (const auto & name : le.getDependencies() | std::ranges::views::keys)
+    for (const auto & name : this->resolved_dependencies_)
     {
         const auto & dep = all_dependencies.at(name);
         state << name << "=" << dep.getStateHash() << std::endl;

@@ -6,6 +6,10 @@
 
 namespace roah::distb {
 
+namespace config {
+class Condition;
+}  // namespace config
+
 class WorkingContext
 {
 protected:
@@ -14,17 +18,25 @@ protected:
 public:
     virtual ~WorkingContext() noexcept;
 
+    [[nodiscard]]
     virtual const std::filesystem::path &
     getCurrentWorkingDirectory() const
         = 0;
 
+    [[nodiscard]]
     virtual std::string
     resolveString(const std::string & str) const
         = 0;
 
     // [libraryName]: [hash]
+    [[nodiscard]]
     virtual const std::unordered_map<std::string, std::string> &
     getDependencies() const
+        = 0;
+
+    [[nodiscard]]
+    virtual bool
+    evalCondition(const config::Condition & condition) const
         = 0;
 };
 

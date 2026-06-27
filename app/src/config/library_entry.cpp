@@ -28,12 +28,7 @@ roah::distb::config::LibraryEntry::setBase(const LibraryEntry & base_entry)
     this->dependencies_      = base_entry.dependencies_;
     this->order_             = base_entry.order_;
     this->license_file_path_ = base_entry.license_file_path_;
-
-    this->steps_.clear();
-    for (const auto & [key, ptr] : base_entry.steps_)
-    {
-        this->steps_.try_emplace(key, ptr.copy());
-    }
+    this->steps_             = base_entry.steps_;
 }
 
 void
@@ -166,7 +161,7 @@ roah::distb::config::LibraryEntry::updateFromJson(const nlohmann::json & json)
                 else
                 {
                     // override する必要があるので, clone する
-                    auto cloned_instance = step.ref().clone();
+                    auto cloned_instance = step->clone();
                     cloned_instance->loadFromJson(val);
                     step = std::move(cloned_instance);
                 }
@@ -226,53 +221,4 @@ roah::distb::config::LibraryEntry::build(const WorkingContext & working_ctx) con
         const auto & step = this->steps_.at(step_name);
         step.ref()(working_ctx);
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// StepDefHolder class implementation
-//
-///////////////////////////////////////////////////////////////////////////////////////////////////
-roah::distb::config::LibraryEntry::StepDefHolder::StepDefHolder()
-    : instance_{ nullptr }
-    , ptr_{ nullptr }
-{}
-
-roah::distb::config::LibraryEntry::StepDefHolder::StepDefHolder(std::unique_ptr<StepDef> && instance) noexcept
-    : instance_{ std::move(instance) }
-    , ptr_{ this->instance_.get() }
-{}
-
-roah::distb::config::LibraryEntry::StepDefHolder::StepDefHolder(const StepDef * ptr) noexcept
-    : ptr_{ ptr }
-{}
-
-roah::distb::config::LibraryEntry::StepDefHolder::StepDefHolder(StepDefHolder &&) noexcept = default;
-
-roah::distb::config::LibraryEntry::StepDefHolder &
-roah::distb::config::LibraryEntry::StepDefHolder::operator=(StepDefHolder &&) noexcept
-    = default;
-
-roah::distb::config::LibraryEntry::StepDefHolder::~StepDefHolder() noexcept = default;
-
-bool
-roah::distb::config::LibraryEntry::StepDefHolder::operator!() const noexcept
-{
-    return this->ptr_ == nullptr;
-}
-
-const roah::distb::config::StepDef &
-roah::distb::config::LibraryEntry::StepDefHolder::ref() const
-{
-    if (this->ptr_ == nullptr)
-    {
-        throw std::runtime_error{ "null StepDef access." };
-    }
-    return *this->ptr_;
-}
-
-roah::distb::config::LibraryEntry::StepDefHolder
-roah::distb::config::LibraryEntry::StepDefHolder::copy() const noexcept
-{
-    return StepDefHolder{ this->ptr_ };
 }

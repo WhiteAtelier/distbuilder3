@@ -4,6 +4,7 @@
 #include "dependency_spec.hpp"
 #include "step_def.hpp"
 //
+#include "roah/distb/utils/delay_copyable_container.hpp"
 #include "roah/distb/utils/option_value.hpp"
 
 #include <nlohmann/json_fwd.hpp>
@@ -63,36 +64,7 @@ public:
     build(const WorkingContext & working_ctx) const;
 
 private:
-    class StepDefHolder
-    {
-    public:
-        StepDefHolder();
-        StepDefHolder(std::unique_ptr<StepDef> && instance) noexcept;
-        StepDefHolder(StepDefHolder &&) noexcept;
-        StepDefHolder &
-        operator=(StepDefHolder &&) noexcept;
-        ~StepDefHolder() noexcept;
-
-        StepDefHolder(const StepDefHolder &) = delete;
-        StepDefHolder &
-        operator=(const StepDefHolder &)
-            = delete;
-
-        bool
-        operator!() const noexcept;
-
-        const StepDef &
-        ref() const;
-
-        StepDefHolder
-        copy() const noexcept;
-
-    private:
-        StepDefHolder(const StepDef * ptr) noexcept;
-
-        std::unique_ptr<StepDef> instance_;
-        const StepDef *          ptr_;
-    };
+    using StepDefHolder = utils::DelayCopyableContainer<StepDef>;
 
     std::string                                         version_;
     std::unordered_map<std::string, utils::OptionValue> options_;

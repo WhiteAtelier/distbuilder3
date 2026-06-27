@@ -476,17 +476,12 @@ roah::distb::app::App::Impl_::_resolveDeps(const std::vector<std::string> & libr
         auto & dep = this->all_dependencies_.at(name);
         dep.loadLibraryConfig(this->app_config_);
 
-        // そのバージョンでの dependencies をキューに追加する.
-        const auto & le         = dep.getLibraryEntityConfigOfSelectedVersion();
-        const auto & child_deps = le.getDependencies();
-        for (const auto & child_dep : child_deps | std::ranges::views::values)
+        for (const auto & child_dep_name : dep.getResolvedDependencies())
         {
-            // todo: condition 評価.
-
-            if (this->all_dependencies_.try_emplace(child_dep.getName(), child_dep.getName()).second)
+            if (this->all_dependencies_.try_emplace(child_dep_name, child_dep_name).second)
             {
                 // 新しく追加された.
-                new_library_names.emplace_back(child_dep.getName());
+                new_library_names.emplace_back(child_dep_name);
             }
         }
     }
@@ -519,12 +514,10 @@ roah::distb::app::App::Impl_::_buildDeps()
                 continue;
             }
 
-            const auto & le        = dep.getLibraryEntityConfigOfSelectedVersion();
-            const auto & dep_deps  = le.getDependencies();
-            bool         can_build = true;
-            for (const auto & child_dep : dep_deps | std::ranges::views::values)
+            bool can_build = true;
+            for (const auto & child_dep_name : dep.getResolvedDependencies())
             {
-                if (!builts.contains(child_dep.getName()))
+                if (!builts.contains(child_dep_name))
                 {
                     can_build = false;
                     break;

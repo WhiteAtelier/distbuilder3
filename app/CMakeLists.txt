@@ -30,6 +30,7 @@ roah_add_library(distb-utils
 
     HEADERS
         roah/distb/utils/base32.hpp
+        roah/distb/utils/delay_copyable_container.hpp
         roah/distb/utils/hash.hpp
         roah/distb/utils/option_value.hpp
         roah/distb/utils/path.hpp
@@ -79,6 +80,19 @@ roah_add_library(distb-config
         config/library_entry.cpp
         config/library.cpp
         config/step_def.cpp
+
+        config/impl/condition_and_op_impl.cpp
+        config/impl/condition_and_op_impl.hpp
+        config/impl/condition_and_or_op_impl.cpp
+        config/impl/condition_and_or_op_impl.hpp
+        config/impl/condition_is_false_op_impl.cpp
+        config/impl/condition_is_false_op_impl.hpp
+        config/impl/condition_is_op_impl.cpp
+        config/impl/condition_is_op_impl.hpp
+        config/impl/condition_is_true_op_impl.cpp
+        config/impl/condition_is_true_op_impl.hpp
+        config/impl/condition_or_op_impl.cpp
+        config/impl/condition_or_op_impl.hpp
 
         config/impl/step_cmake_configure_impl.cpp
         config/impl/step_cmake_configure_impl.hpp

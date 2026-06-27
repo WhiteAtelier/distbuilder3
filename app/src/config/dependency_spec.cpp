@@ -1,8 +1,6 @@
-// This file contains code generated with the assistance of Claude (Anthropic), an AI assistant.
-// The generated code is provided as-is.
-
 #include "roah/distb/config/dependency_spec.hpp"
 
+#include "roah/distb/config/condition.hpp"
 #include "roah/distb/errors.hpp"
 
 #include <nlohmann/json.hpp>
@@ -97,7 +95,20 @@ roah::distb::config::DependencySpec::updateFromJson(const nlohmann::json & json)
         }
     }
 
-    // TODO: condition 実装
+    // condition
+    if (const auto i_condition = json.find("condition"); i_condition != json.cend())
+    {
+        if (i_condition->is_null())
+        {
+            this->condition_.reset();
+        }
+        else
+        {
+            auto new_condition = makeConditionFromJson(*i_condition);
+            new_condition->loadFromJson(*i_condition);
+            this->condition_ = std::move(new_condition);
+        }
+    }
 }
 
 const std::string &
@@ -116,4 +127,14 @@ const std::unordered_map<std::string, roah::distb::utils::OptionValue> &
 roah::distb::config::DependencySpec::getOptions() const noexcept
 {
     return this->options_;
+}
+
+bool
+roah::distb::config::DependencySpec::evalCondition(const config::Variables & variables) const
+{
+    if (this->condition_)
+    {
+        return this->condition_->eval(variables);
+    }
+    return true;
 }

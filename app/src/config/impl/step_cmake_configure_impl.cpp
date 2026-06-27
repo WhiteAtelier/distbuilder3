@@ -1,5 +1,6 @@
 #include "step_cmake_configure_impl.hpp"
 
+#include "roah/distb/config/condition.hpp"
 #include "roah/distb/errors.hpp"
 #include "roah/distb/logger.hpp"
 #include "roah/distb/utils/path.hpp"
@@ -106,10 +107,12 @@ roah::distb::config::impl::StepCMakeConfigureImpl::operator()(const WorkingConte
     }
     for (const auto & arg_subset : this->args_ | std::ranges::views::values)
     {
-        // TODO: condition 評価
-        for (const auto & arg : arg_subset.args)
+        if (!arg_subset.condition || context.evalCondition(*arg_subset.condition))
         {
-            cmd.emplace_back(utils::toU8String(context.resolveString(arg)));
+            for (const auto & arg : arg_subset.args)
+            {
+                cmd.emplace_back(utils::toU8String(context.resolveString(arg)));
+            }
         }
     }
     cmd.emplace_back(u8"-DCMAKE_DEBUG_POSTFIX=d");
@@ -244,7 +247,16 @@ roah::distb::config::impl::StepCMakeConfigureImpl::loadFromJson(const nlohmann::
                     }
                     if (const auto i_condition = value.find("condition"); i_condition != value.end())
                     {
-                        // TODO: condition
+                        if (i_condition->is_null())
+                        {
+                            subset.condition.reset();
+                        }
+                        else
+                        {
+                            auto cd = makeConditionFromJson(*i_condition);
+                            cd->loadFromJson(*i_condition);
+                            subset.condition = std::move(cd);
+                        }
                     }
                 }
                 else

@@ -2,6 +2,7 @@
 #define ROAH_DISTB_CONFIG_IMPL_STEP_CMAKE_CONFIGURE_IMPL_HPP
 
 #include "roah/distb/config/step_def.hpp"
+#include "roah/distb/utils/delay_copyable_container.hpp"
 
 #include <nlohmann/json_fwd.hpp>
 
@@ -10,6 +11,10 @@
 #include <memory>
 #include <string>
 #include <string_view>
+
+namespace roah::distb::config {
+class Condition;
+}  // namespace roah::distb::config
 
 namespace roah::distb::config::impl {
 
@@ -38,10 +43,12 @@ public:
     loadFromJson(const nlohmann::json & json) override;
 
 private:
+    using ConditionHolder = utils::DelayCopyableContainer<Condition>;
+
     struct ArgsSubset
     {
         std::vector<std::string> args;
-        // condition
+        ConditionHolder          condition;
     };
 
     std::string                       source_dir_;
