@@ -11,21 +11,20 @@
 
 namespace roah::distb::utils {
 
-// SHA-256 ハッシュを計算するクラス.
-// addData() を複数回呼び出してデータを追加し, getHash() でハッシュ値を取得する.
-// getHash() を呼び出しても内部状態は変化しないため, 呼び出し後も addData() を継続できる.
-class SHA256Hash
+namespace detail {
+class HashGeneratorBase
 {
 public:
-    SHA256Hash();
-    SHA256Hash(const SHA256Hash &) = delete;
-    SHA256Hash(SHA256Hash &&) noexcept;
-    SHA256Hash &
-    operator=(const SHA256Hash &)
+    HashGeneratorBase(HashGeneratorBase &&) noexcept;
+    virtual ~HashGeneratorBase() noexcept;
+
+    HashGeneratorBase(const HashGeneratorBase &) = delete;
+    HashGeneratorBase &
+    operator=(const HashGeneratorBase &)
         = delete;
-    SHA256Hash &
-    operator=(SHA256Hash &&) noexcept;
-    ~SHA256Hash();
+    HashGeneratorBase &
+    operator=(HashGeneratorBase &&)
+        = delete;
 
     // データを追加してハッシュを更新する.
     void
@@ -39,9 +38,39 @@ public:
     std::string
     getHashAsHexString() const;
 
+protected:
+    class Generator;
+
+    HashGeneratorBase(std::unique_ptr<Generator> && generator);
+
+    std::unique_ptr<Generator> generator_;
+};
+}  // namespace detail
+
+// SHA-256 ハッシュを計算するクラス.
+// addData() を複数回呼び出してデータを追加し, getHash() でハッシュ値を取得する.
+// getHash() を呼び出しても内部状態は変化しないため, 呼び出し後も addData() を継続できる.
+class SHA256Hash final : public detail::HashGeneratorBase
+{
+public:
+    SHA256Hash();
+    SHA256Hash(SHA256Hash &&) noexcept;
+    ~SHA256Hash() noexcept override;
+
 private:
-    class Impl;
-    std::unique_ptr<Impl> impl_;
+    class GeneratorImpl;
+};
+
+/// @brief MD5 ハッシュを計算するクラス.
+class MD5Hash final : public detail::HashGeneratorBase
+{
+public:
+    MD5Hash();
+    MD5Hash(MD5Hash &&) noexcept;
+    ~MD5Hash() noexcept override;
+
+private:
+    class GeneratorImpl;
 };
 
 }  // namespace roah::distb::utils

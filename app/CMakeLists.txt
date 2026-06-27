@@ -21,11 +21,14 @@ roah_add_library(distb-utils
 
     SOURCES
         utils/base32.cpp
+        utils/hash.cpp
         utils/subprocess.cpp
         utils/option_value.cpp
         utils/path.cpp
         utils/string_expander.cpp
         utils/string.cpp
+        
+        utils/impl/generator.hpp
 
     HEADERS
         roah/distb/utils/base32.hpp
@@ -50,11 +53,19 @@ roah_add_library(distb-utils
 # SHA-256 ハッシュ実装に必要なプラットフォーム固有のソースとライブラリをリンクする.
 # Windows: BCrypt (Windows CNG API), Unix: OpenSSL libcrypto
 if (WIN32)
-    target_sources(distb-utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/hash_win32.cpp")
+    target_sources(distb-utils
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/impl/hash_win32.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/impl/hash_win32.hpp"
+    )
     target_link_libraries(distb-utils PRIVATE bcrypt)
 else()
     find_package(OpenSSL REQUIRED)
-    target_sources(distb-utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/hash_linux.cpp")
+    target_sources(distb-utils
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/impl/hash_unix.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/impl/hash_unix.hpp"
+    )
     target_link_libraries(distb-utils PRIVATE OpenSSL::Crypto)
 endif()
 

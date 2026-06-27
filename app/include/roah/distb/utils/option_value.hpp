@@ -74,6 +74,26 @@ public:
     std::partial_ordering
     operator<=>(const OptionValue & rhs) const;
 
+    /// @brief bool 値を保持しているかどうかを返す.
+    [[nodiscard]]
+    bool
+    hasBool() const noexcept;
+
+    /// @brief int 値を保持しているかどうかを返す.
+    [[nodiscard]]
+    bool
+    hasInt() const noexcept;
+
+    /// @brief double 値を保持しているかどうかを返す.
+    [[nodiscard]]
+    bool
+    hasDouble() const noexcept;
+
+    /// @brief string 値を保持しているかどうかを返す.
+    [[nodiscard]]
+    bool
+    hasString() const noexcept;
+
     /// @brief 保持している値を文字列に変換する.
     ///
     /// bool は true="ON", false="OFF" に変換する.

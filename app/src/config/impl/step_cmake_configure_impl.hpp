@@ -6,6 +6,7 @@
 #include <nlohmann/json_fwd.hpp>
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -37,9 +38,15 @@ public:
     loadFromJson(const nlohmann::json & json) override;
 
 private:
-    std::string              src_dir_;
-    std::string              build_dir_;
-    std::vector<std::string> args_;
+    struct ArgsSubset
+    {
+        std::vector<std::string> args;
+        // condition
+    };
+
+    std::string                       src_dir_;
+    std::string                       build_dir_;
+    std::map<std::string, ArgsSubset> args_;
 };
 
 }  // namespace roah::distb::config::impl

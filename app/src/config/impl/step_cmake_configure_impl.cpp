@@ -104,9 +104,13 @@ roah::distb::config::impl::StepCMakeConfigureImpl::operator()(const WorkingConte
         cmd.emplace_back(u8"-A");
         cmd.emplace_back(utils::toU8String(arch));
     }
-    for (const auto & arg : this->args_)
+    for (const auto & arg_subset : this->args_ | std::ranges::views::values)
     {
-        cmd.emplace_back(utils::toU8String(context.resolveString(arg)));
+        // TODO: condition 評価
+        for (const auto & arg : arg_subset.args)
+        {
+            cmd.emplace_back(utils::toU8String(context.resolveString(arg)));
+        }
     }
     cmd.emplace_back(u8"-DCMAKE_DEBUG_POSTFIX=d");
     cmd.emplace_back(u8"-DCMAKE_CONFIGURATION_TYPES=Debug;Release");
@@ -166,19 +170,92 @@ roah::distb::config::impl::StepCMakeConfigureImpl::loadFromJson(const nlohmann::
 
     if (const auto i_args = json.find("args"); i_args != json.end())
     {
-        if (!i_args->is_array())
-        {
-            throw LibraryConfigError{ "Invalid 'args' field: expected an array." };
+        /*
+        args 記法:
+
+        基本型は
+        "args": {
+            "<subsetName>": {
+                "args": ["arg1", "arg2", ...],
+                "condition": <conditionObject>
+            },
         }
 
-        this->args_.clear();
-        for (const auto & arg : *i_args)
+        shorthand として以下も可能.
+        "args": {
+            "<subsetName>": ["arg1", "arg2", ...],
+        }
+
+        また, subsetName を "default" とする場合, 以下のようにも書ける.
+        "args": ["arg1", "arg2", ...]
+        */
+
+        if (i_args->is_array())
         {
-            if (!arg.is_string())
+            auto & default_subset = this->args_["default"];
+            for (const auto & arg : *i_args)
             {
-                throw LibraryConfigError{ "Invalid 'args' field: expected an array of strings." };
+                if (!arg.is_string())
+                {
+                    throw LibraryConfigError{ "Invalid 'args' field: expected an array of strings." };
+                }
+                default_subset.args.emplace_back(arg.get<std::string>());
             }
-            this->args_.emplace_back(arg.get<std::string>());
+        }
+        else if (i_args->is_object())
+        {
+            for (const auto & [key, value] : i_args->items())
+            {
+                if (value.is_null())
+                {
+                    this->args_.erase(key);
+                    continue;
+                }
+
+                auto & subset = this->args_[key];
+                if (value.is_array())
+                {
+                    for (const auto & arg : value)
+                    {
+                        if (!arg.is_string())
+                        {
+                            throw LibraryConfigError{ "Invalid 'args.{}' field: expected an array of strings.", key };
+                        }
+                        subset.args.emplace_back(arg.get<std::string>());
+                    }
+                }
+                else if (value.is_object())
+                {
+                    if (const auto i_subset_args = value.find("args"); i_subset_args != value.end())
+                    {
+                        if (!i_subset_args->is_array())
+                        {
+                            throw LibraryConfigError{ "Invalid 'args.{}.args' field: expected an array.", key };
+                        }
+                        for (const auto & arg : *i_subset_args)
+                        {
+                            if (!arg.is_string())
+                            {
+                                throw LibraryConfigError{ "Invalid 'args.{}.args' field: expected an array of strings.",
+                                                          key };
+                            }
+                            subset.args.emplace_back(arg.get<std::string>());
+                        }
+                    }
+                    if (const auto i_condition = value.find("condition"); i_condition != value.end())
+                    {
+                        // TODO: condition
+                    }
+                }
+                else
+                {
+                    throw LibraryConfigError{ "Invalid 'args.{}' field: expected an object or array.", key };
+                }
+            }
+        }
+        else
+        {
+            throw LibraryConfigError{ "Invalid 'args' field: expected an array." };
         }
     }
 }

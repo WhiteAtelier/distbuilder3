@@ -143,6 +143,30 @@ roah::distb::utils::OptionValue::operator==(const OptionValue & rhs) const
     return _compare<EqualComp>(*this, rhs);
 }
 
+bool
+roah::distb::utils::OptionValue::hasBool() const noexcept
+{
+    return std::holds_alternative<bool>(this->value_);
+}
+
+bool
+roah::distb::utils::OptionValue::hasInt() const noexcept
+{
+    return std::holds_alternative<std::int64_t>(this->value_);
+}
+
+bool
+roah::distb::utils::OptionValue::hasDouble() const noexcept
+{
+    return std::holds_alternative<double>(this->value_);
+}
+
+bool
+roah::distb::utils::OptionValue::hasString() const noexcept
+{
+    return std::holds_alternative<std::string>(this->value_);
+}
+
 std::partial_ordering
 roah::distb::utils::OptionValue::operator<=>(const OptionValue & rhs) const
 {

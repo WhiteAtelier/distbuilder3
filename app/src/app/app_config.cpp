@@ -13,6 +13,7 @@
 roah::distb::app::AppConfig::AppConfig(std::filesystem::path executable_dir)
     : executable_dir_{ std::move(executable_dir) }
     , default_search_path_{ this->executable_dir_ / "libs" }
+    , force_build_{ false }
     , file_path_{ _getDefaultFilePath() }
     , build_dir_{ _getDefaultBuildDirectory() }
     , install_dir_{ _getDefaultInstallDirectory() }
@@ -23,6 +24,18 @@ roah::distb::app::AppConfig::AppConfig(std::filesystem::path executable_dir)
 {}
 
 roah::distb::app::AppConfig::~AppConfig() noexcept = default;
+
+void
+roah::distb::app::AppConfig::setForceBuild(const bool force_build) noexcept
+{
+    this->force_build_ = force_build;
+}
+
+bool
+roah::distb::app::AppConfig::isForceBuild() const noexcept
+{
+    return this->force_build_;
+}
 
 const std::filesystem::path &
 roah::distb::app::AppConfig::getFilePath() const noexcept
@@ -164,10 +177,4 @@ const std::u8string &
 roah::distb::app::AppConfig::getArchitecture() const noexcept
 {
     return this->architecture_;
-}
-
-std::filesystem::path
-roah::distb::app::AppConfig::_getDefaultBuildDirectory()
-{
-    return std::filesystem::temp_directory_path() / "distb_buildtmp";
 }

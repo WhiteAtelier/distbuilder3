@@ -52,6 +52,12 @@ protected:
                        const std::string &    key,
                        std::string &          out);
 
+    static bool
+    _getBoolFromJson(const std::string_view cmd,  //
+                     const nlohmann::json & json,
+                     const std::string &    key,
+                     bool &                 out);
+
 private:
     std::string_view cmd_;
 };

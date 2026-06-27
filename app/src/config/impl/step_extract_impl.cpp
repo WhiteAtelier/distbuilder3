@@ -12,6 +12,8 @@
 roah::distb::config::impl::StepExtractImpl::StepExtractImpl()
     : StepDef{ kCmd }
     , output_{ "." }  // = working directory
+    , verbosity_{ false }
+    , error_ok_{ false }
 {}
 
 roah::distb::config::impl::StepExtractImpl::StepExtractImpl(const StepExtractImpl &) = default;
@@ -79,6 +81,10 @@ roah::distb::config::impl::StepExtractImpl::operator()(const WorkingContext & co
         u8"-C",
         output.u8string(),
     } };
+    if (this->verbosity_)
+    {
+        cmd.emplace_back(u8"-v");
+    }
 
     const auto result = utils::run(cmd,
                                    {
@@ -86,7 +92,10 @@ roah::distb::config::impl::StepExtractImpl::operator()(const WorkingContext & co
                                        .print_stderr = logger.isVerbose(),
                                    });
 
-    AppError::check(result.exit_code == 0, "StepExtractImpl: tar exited with code {}.", result.exit_code);
+    if (!this->error_ok_)
+    {
+        AppError::check(result.exit_code == 0, "StepExtractImpl: tar exited with code {}.", result.exit_code);
+    }
 
     logger.log("Extract Done.");
 }
@@ -102,4 +111,6 @@ roah::distb::config::impl::StepExtractImpl::loadFromJson(const nlohmann::json & 
 {
     this->_getStringFromJson(kCmd, json, "input", this->input_);
     this->_getStringFromJson(kCmd, json, "output", this->output_);
+    this->_getBoolFromJson(kCmd, json, "verbosity", this->verbosity_);
+    this->_getBoolFromJson(kCmd, json, "error_ok", this->error_ok_);
 }

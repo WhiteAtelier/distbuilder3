@@ -5,6 +5,7 @@
 //
 #include "roah/distb/config/library.hpp"
 #include "roah/distb/errors.hpp"
+#include "roah/distb/logger.hpp"
 #include "roah/distb/utils/base32.hpp"
 #include "roah/distb/utils/hash.hpp"
 #include "roah/distb/utils/string.hpp"
@@ -166,7 +167,7 @@ template roah::distb::utils::OptionValue & roah::distb::app::Dependency::setOpti
 template roah::distb::utils::OptionValue & roah::distb::app::Dependency::setOption(std::string, std::int64_t);
 // clang-format on
 
-const std::unordered_map<std::string, roah::distb::utils::OptionValue> &
+const std::map<std::string, roah::distb::utils::OptionValue> &
 roah::distb::app::Dependency::getOptions() const noexcept
 {
     return this->options_;
@@ -222,9 +223,27 @@ void
 roah::distb::app::Dependency::build(const AppConfig &                                   app_config,
                                     const std::unordered_map<std::string, Dependency> & all_dependencies)
 {
+    // option をマージする
+    for (const auto & le = this->getLibraryEntityConfigOfSelectedVersion();
+         const auto & [name, base_option] : le.getOptions())
+    {
+        // すでに存在する場合は上書きしない.
+        this->options_.try_emplace(name, base_option);
+    }
+
     // ビルドできる状態であるとする.
     // まず state hash を計算する.
     this->_calculateStateHash(all_dependencies);
+
+    // インストールディレクトリが存在した場合はスキップにする.
+    const auto install_dir = app_config.getInstallDirectory()             //
+                           / (this->getAuthor() + "." + this->getRepo())  //
+                           / this->state_hash_;
+    if (!app_config.isForceBuild() && std::filesystem::exists(install_dir))
+    {
+        logger.log("Dependency {}.{}: Already built. Skip.", this->getAuthor(), this->getRepo());
+        return;
+    }
 
     const auto & le = this->getLibraryEntityConfigOfSelectedVersion();
 
@@ -248,16 +267,12 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     variables["cmakeBin"]       = utils::toString(app_config.getCMakeExecutable());
 
     variables["workingDir"] = utils::toString(build_root.u8string());
-    variables["installDir"] = utils::toString((app_config.getInstallDirectory() / this->state_hash_).u8string());
+    variables["installDir"] = utils::toString(install_dir.u8string());
 
     // -- option は "option." の名前空間に入れる
-    for (const auto & base_option : le.getOptions())
-    {
-        variables["options." + base_option.first] = base_option.second;
-    }
     for (const auto & [key, value] : this->options_)
     {
-        variables["options." + key] = value;  // override
+        variables["options." + key] = value;
     }
 
     std::unordered_map<std::string, std::string> dependencies;
@@ -293,8 +308,9 @@ roah::distb::app::Dependency::_calculateStateHash(const std::unordered_map<std::
         state << name << "=" << dep.getStateHash() << std::endl;
     }
 
-    utils::SHA256Hash hash;
-    auto              state_str = state.str();
+    // ファイル名には MD5 を使う.
+    utils::MD5Hash hash;
+    auto           state_str = state.str();
     hash.addData(state_str.data(), state_str.size());
     const auto hash_bin = hash.getHashBinary();
     this->state_hash_   = utils::encodeBase32(hash_bin.data(), hash_bin.size(), /*small char*/ true);

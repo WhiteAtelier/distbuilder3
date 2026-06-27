@@ -1,93 +1,56 @@
 {
+    "repository": "https://github.com/nlohmann/json",
     "entries": [
         {
-            // 最初はフル定義
-            "version": "v1.2.3",
+            "version": "3.11.3",
             "options": {
-                "Hoge": "fuga", // オプションとデフォルト値
-                "Piyo": false,
+                "disable_enum_serialization": false,
+                "implicit_conversions": true,
+                "multiple_headers": true
             },
-            "dependencies": {
-                "nlohmann.json": {
-                    "name": "foo",
-                    "version": [
-                        "v1.0.0",
-                        "...", // その間全て
-                        "v1.1.0",
-                    ],
-                    "options": {
-                        "FooOption": 42, // 強制オプション
-                    },
-                },
-                "bar": {
-                    "name": "bar",
-                    "version": [
-                        "v2.0.0",
-                        "...", // 以降全て
-                    ],
-                },
-            },
-            "recipes": [
-                // ビルド手順
-                "echo",
-                "download",
-                "configure",
-                "build",
-            ],
             "steps": {
-                // ビルド手順の定義
-                "echo": {
-                    "cmd": "subp",
-                    "args": ["echo Hello, World!"],
-                },
+                "order": ["download", "extract", "configure", "build"],
                 "download": {
-                    "cmd": "wget",
-                    "url": "https://example.com/file/${version}.zip",
-                    "output": "file.zip",
-                    "hash": "abc123def456...",
+                    "cmd": "download",
+                    "url": "https://github.com/nlohmann/json/archive/refs/tags/v${version}.zip",
+                    "output": "src.zip",
+                    "hash": "04022b05d806eb5ff73023c280b68697d12b93e1b7267a0b22a1a39ec7578069"
+                },
+                "extract": {
+                    "cmd": "extract",
+                    "input": "src.zip",
+                    "output": "."
                 },
                 "configure": {
                     "cmd": "cmake-configure",
-                    "args": ["-DFOO=${options.Hoge}"],
+                    "srcDir": "json-${version}",
+                    "buildDir": "build",
+                    "args": [
+                        "-DJSON_BuildTests=OFF",
+                        "-DJSON_CI=OFF",
+                        "-DJSON_GlobalUDLs=OFF",
+                        "-DJSON_Install=ON",
+                        "-DJSON_LegacyDiscardedValueComparison=OFF",
+                        "-DJSON_SystemInclude=OFF",
+                        "-DJSON_DisableEnumSerialization=${options.disable_enum_serialization}",
+                        "-DJSON_ImplicitConversions=${options.implicit_conversions}",
+                        "-DJSON_MultipleHeaders=${options.multiple_headers}"
+                    ]
                 },
                 "build": {
-                    "cmd": "cmake-build",
-                    "args": ["--target", "all"],
-                },
-            },
+                    "cmd": "cmake-install-all",
+                    "buildDir": "build"
+                }
+            }
         },
         {
-            // その後は継承が利用できる
-            // 基本的に明記したら上書き、null 指定で削除、明記なしで継承
-            "version": "v2.0.0",
-            "base": "${previous}", // 基底
-            "options": {
-                "Hoge": "fuga", // すでにあるオプションの場合、デフォルト値は上書き
-                "Piyo": null, // null 指定でオプション削除
-            },
-            "dependencies": {
-                "nlohmann.json": {
-                    "version": ["v1.1.0"],
-                    "options": {
-                        "FooOption": null, // null 指定でオプション制約削除
-                        "BarOption": true, // 新しいオプション制約追加
-                    },
-                },
-                // 依存関係自体を削除したい場合は、null 指定
-                "bar": null, // 依存関係削除
-            },
+            "version": "3.12.0",
+            "base": "${previous}",
             "steps": {
-                "echo": {
-                    "args": ["echo Hello, v2!"], // ビルド手順の引数上書き
-                },
-                "configure": null, // ビルド手順削除
-                "new-step": {
-                    // 新しいビルド手順追加
-                    "cmd": "custom-cmd",
-                    "args": ["--option"],
-                },
-            },
-            "recipes": ["download", "build", "new-step"], // ビルド手順の定義も上書き
-        },
-    ],
+                "download": {
+                    "hash": "34660b5e9a407195d55e8da705ed26cc6d175ce5a6b1fb957e701fb4d5b04022"
+                }
+            }
+        }
+    ]
 }

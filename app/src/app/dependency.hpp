@@ -5,6 +5,7 @@
 #include "roah/distb/utils/option_value.hpp"
 
 #include <filesystem>
+#include <map>
 #include <string>
 #include <unordered_map>
 
@@ -52,7 +53,7 @@ public:
     utils::OptionValue &
     setOption(std::string key, T value);
 
-    const std::unordered_map<std::string, utils::OptionValue> &
+    const std::map<std::string, utils::OptionValue> &
     getOptions() const noexcept;
 
     void
@@ -77,11 +78,11 @@ private:
     void
     _calculateStateHash(const std::unordered_map<std::string, Dependency> & all_dependencies);
 
-    std::string                                         version_;
-    std::unordered_map<std::string, utils::OptionValue> options_;
-    config::Library                                     library_conf_;
-    bool                                                library_conf_loaded_;
-    std::string                                         state_hash_;
+    std::string                               version_;
+    std::map<std::string, utils::OptionValue> options_;
+    config::Library                           library_conf_;
+    bool                                      library_conf_loaded_;
+    std::string                               state_hash_;
 };
 
 }  // namespace roah::distb::app

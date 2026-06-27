@@ -53,6 +53,24 @@ roah::distb::config::StepDef::_getStringFromJson(const std::string_view cmd,
     return false;
 }
 
+bool
+roah::distb::config::StepDef::_getBoolFromJson(const std::string_view cmd,
+                                               const nlohmann::json & json,
+                                               const std::string &    key,
+                                               bool &                 out)
+{
+    if (auto iter = json.find(key); iter != json.end())
+    {
+        if (!iter->is_boolean())
+        {
+            throw LibraryConfigError{ "Invalid '{}' step definition: field '{}' must be a boolean.", cmd, key };
+        }
+        iter->get_to(out);
+        return true;
+    }
+    return false;
+}
+
 namespace {
 template <typename T>
 T &

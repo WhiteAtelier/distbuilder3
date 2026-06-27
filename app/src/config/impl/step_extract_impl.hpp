@@ -39,6 +39,8 @@ public:
 private:
     std::string input_;
     std::string output_;
+    bool        verbosity_;
+    bool        error_ok_;
 };
 
 }  // namespace roah::distb::config::impl

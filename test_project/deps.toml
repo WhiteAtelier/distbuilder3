@@ -1,10 +1,2 @@
 
-# [gabime.spdlog]
-
-# hoge = "foobar"
-
-[CLIUtils.CLI11]
-# version = "${latest}"
-
-[madler.zlib]
-# version = "${latest}"
+[facebook.zstd]

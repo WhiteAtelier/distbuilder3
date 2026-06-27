@@ -2,6 +2,7 @@
 //
 #include "roah/distb/errors.hpp"
 
+#include <array>
 #include <filesystem>
 
 #if defined(ROAH_ARCH_WIN32)
@@ -43,5 +44,19 @@ roah::distb::app::AppConfig::_getDefaultInstallDirectory()
     return ret;
 #else
     static_assert(false && "Unsupported platform");
+#endif
+}
+
+std::filesystem::path
+roah::distb::app::AppConfig::_getDefaultBuildDirectory()
+{
+#if defined(ROAH_ARCH_WIN32)
+    auto         size = ::GetTempPath2W(0, nullptr);
+    std::wstring path(static_cast<std::size_t>(size), L'\0');
+    size = ::GetTempPath2W(size, path.data());
+    path.resize(static_cast<std::size_t>(size));
+    return std::filesystem::path{ path } / L"distb_buildtmp";
+#else
+    return std::filesystem::temp_directory_path() / "distb_buildtmp";
 #endif
 }

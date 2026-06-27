@@ -23,6 +23,13 @@ public:
     operator=(AppConfig &&)
         = delete;
 
+    void
+    setForceBuild(const bool force_build) noexcept;
+
+    [[nodiscard]]
+    bool
+    isForceBuild() const noexcept;
+
     [[nodiscard]]
     const std::filesystem::path &
     getFilePath() const noexcept;
@@ -67,6 +74,7 @@ private:
     const std::filesystem::path        executable_dir_;
     const std::filesystem::path        default_search_path_;
     //
+    bool                               force_build_;
     std::filesystem::path              file_path_;
     std::filesystem::path              build_dir_;
     std::filesystem::path              install_dir_;

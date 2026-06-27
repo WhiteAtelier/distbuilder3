@@ -1,4 +1,5 @@
 {
+    "repository": "https://github.com/gabime/spdlog",
     "entries": [
         {
             "version": "v1.15.0",

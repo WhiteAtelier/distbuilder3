@@ -17,6 +17,8 @@
 #include <iostream>
 #include <ranges>
 #include <regex>
+#include <set>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -53,9 +55,13 @@ private:
     void
     _buildDeps();
 
+    void
+    _updateDepsToml();
+
     using DependencyRef = std::reference_wrapper<Dependency>;
 
     bool                                           a_verbose_;
+    bool                                           a_force_build_;
     std::string                                    a_config_file_;
     std::string                                    a_source_dir_;
     //
@@ -74,6 +80,7 @@ private:
 // ============================================================================================= //
 roah::distb::app::App::Impl_::Impl_(std::filesystem::path executable_dir)
     : a_verbose_{ false }
+    , a_force_build_{ false }
     , a_source_dir_{ "." }
     , app_config_{ std::move(executable_dir) }
 {}
@@ -131,6 +138,9 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
     // Set verbose logging
     logger.setVerbose(this->a_verbose_);
 
+    // Force build
+    this->app_config_.setForceBuild(this->a_force_build_);
+
     // Load AppConfig
     if (!this->a_config_file_.empty())
     {
@@ -158,6 +168,9 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
 
     // build
     this->_buildDeps();
+
+    // Update deps.full.toml
+    this->_updateDepsToml();
 
     return 0;
 }
@@ -226,6 +239,10 @@ roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
     cli_app  //
         .add_flag("-v,--verbose", this->a_verbose_, "Enable verbose logging.")
         ->default_val(this->a_verbose_);
+
+    cli_app  //
+        .add_flag("-f,--force", this->a_force_build_, "Force (re)build.")
+        ->default_val(this->a_force_build_);
 
     cli_app
         .add_option(  //
@@ -314,36 +331,47 @@ roah::distb::app::App::Impl_::_parseDeps()
                 auto & dep = this->all_dependencies_.try_emplace(author + "." + repo, author, repo).first->second;
                 this->dependencies_.try_emplace(author + "." + repo, dep);
 
-                for (const auto & [key, t_value] : t_repo.as_table())
+                if (t_repo.contains("version"))
                 {
-                    if (key == "version")
+                    const auto & t_version = t_repo.at("version");
+                    AppError::check(t_version.is_string(),
+                                    "deps.toml: version must be a string for {}.{}",
+                                    author,
+                                    repo);
+                    dep.setVersion(t_version.as_string());
+                    logger.trace("-- Selected version: {}", dep.getVersion());
+                }
+                if (t_repo.contains("options"))
+                {
+                    const auto & t_options = t_repo.at("options");
+                    AppError::check(t_options.is_table(), "deps.toml: options must be a table for {}.{}", author, repo);
+
+                    for (const auto & [key, t_value] : t_options.as_table())
                     {
-                        dep.setVersion(t_repo.at("version").as_string());
-                        logger.trace("-- Version: {}", t_repo.at("version").as_string());
-                    }
-                    else if (t_value.is_string())
-                    {
-                        dep.setOption<std::string>(key, t_value.as_string());
-                        logger.trace("-- Option: {} = {}", key, t_value.as_string());
-                    }
-                    else if (t_value.is_integer())
-                    {
-                        dep.setOption<std::int64_t>(key, t_value.as_integer());
-                        logger.trace("-- Option: {} = {}", key, t_value.as_integer());
-                    }
-                    else if (t_value.is_boolean())
-                    {
-                        dep.setOption<bool>(key, t_value.as_boolean());
-                        logger.trace("-- Option: {} = {}", key, t_value.as_boolean());
-                    }
-                    else if (t_value.is_floating())
-                    {
-                        dep.setOption<double>(key, t_value.as_floating());
-                        logger.trace("-- Option: {} = {}", key, t_value.as_floating());
-                    }
-                    else
-                    {
-                        AppError::throw_("Invalid option value type for {}.{}: {}", author, repo, key);
+                        if (t_value.is_string())
+                        {
+                            dep.setOption<std::string>(key, t_value.as_string());
+                            logger.trace("-- Option: {} = {}", key, t_value.as_string());
+                        }
+                        else if (t_value.is_integer())
+                        {
+                            dep.setOption<std::int64_t>(key, t_value.as_integer());
+                            logger.trace("-- Option: {} = {}", key, t_value.as_integer());
+                        }
+                        else if (t_value.is_boolean())
+                        {
+                            dep.setOption<bool>(key, t_value.as_boolean());
+                            logger.trace("-- Option: {} = {}", key, t_value.as_boolean());
+                        }
+                        else if (t_value.is_floating())
+                        {
+                            dep.setOption<double>(key, t_value.as_floating());
+                            logger.trace("-- Option: {} = {}", key, t_value.as_floating());
+                        }
+                        else
+                        {
+                            AppError::throw_("Invalid option value type for {}.{}: {}", author, repo, key);
+                        }
                     }
                 }
             }
@@ -410,7 +438,8 @@ roah::distb::app::App::Impl_::_buildDeps()
 {
     // 依存のクリアしたものからビルドしていく.
     std::unordered_set<std::string> builts;
-    bool                            completed = false;
+    bool                            completed    = false;
+    auto                            builts_count = builts.size();
 
     while (!completed)
     {
@@ -443,11 +472,74 @@ roah::distb::app::App::Impl_::_buildDeps()
                            dep.getVersion());
 
                 dep.build(this->app_config_, this->all_dependencies_);
+                builts.emplace(name);
             }
             else
             {
                 completed = false;
             }
         }
+
+        // 少なくともひとつは進んでいるはず.
+        if (builts_count == builts.size())
+        {
+            throw AppError{ "Dependency resolution failed: Circular dependency detected." };
+        }
+        builts_count = builts.size();
     }
+}
+
+void
+roah::distb::app::App::Impl_::_updateDepsToml()
+{
+    // deps name を sort する.
+    auto                  dep_name_range = this->dependencies_ | std::ranges::views::keys;
+    std::set<std::string> sorted_names{ dep_name_range.begin(), dep_name_range.end() };
+
+    toml::value root;
+    for (const auto & name : sorted_names)
+    {
+        const auto & dep   = this->dependencies_.at(name).get();
+        auto &       t_dep = root[dep.getAuthor()][dep.getRepo()];
+        t_dep["version"]   = dep.getVersion();
+
+        toml::value t_opt{ toml::table{} };
+        t_opt.as_table_fmt().fmt = toml::table_format::dotted;
+
+        for (const auto & [key, value] : dep.getOptions())
+        {
+            if (value.hasBool())
+            {
+                t_opt[key] = static_cast<bool>(value);
+            }
+            else if (value.hasInt())
+            {
+                t_opt[key] = static_cast<std::int64_t>(value);
+            }
+            else if (value.hasDouble())
+            {
+                t_opt[key] = static_cast<double>(value);
+            }
+            else if (value.hasString())
+            {
+                t_opt[key] = static_cast<std::string>(value);
+            }
+        }
+
+        t_dep["options"] = std::move(t_opt);
+
+        t_dep.comments().emplace_back("hash: " + dep.getStateHash());
+        t_dep.comments().emplace_back(
+            "path: "
+            + utils::toString((this->app_config_.getInstallDirectory() / name / dep.getStateHash()).u8string()));
+    }
+    std::stringstream sstr;
+    sstr << toml::format(root) << std::endl;
+
+    std::filesystem::path export_path{ this->deps_file_path_.stem().u8string() + u8".full.toml" };
+    std::ofstream         ofst{ export_path };
+    AppError::check(ofst, "Failed to open file for writing: {}", export_path.u8string());
+
+    std::regex remove_author_object_line_re{ R"(\[[^.]+\])" };
+    ofst << std::regex_replace(sstr.str(), remove_author_object_line_re, "") << std::endl;
 }
