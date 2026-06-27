@@ -79,7 +79,8 @@ public:
     build(const AppConfig &                                   app_config,
           const bool                                          dryrun,
           const bool                                          force_build,
-          const std::unordered_map<std::string, Dependency> & all_dependencies);
+          const std::unordered_map<std::string, Dependency> & all_dependencies,
+          const std::string &                                 cxx_standard);
 
     void
     copyLicenseFile(const AppConfig & app_config, const std::filesystem::path & output_dir) const;
@@ -89,7 +90,8 @@ private:
     _loadLibraryConfig(const std::filesystem::path & path, const AppConfig & app_config);
 
     void
-    _calculateStateHash(const std::unordered_map<std::string, Dependency> & all_dependencies);
+    _calculateStateHash(const std::unordered_map<std::string, Dependency> & all_dependencies,
+                        const std::string &                                 cxx_standard);
 
     std::string                               version_;
     std::map<std::string, utils::OptionValue> options_;

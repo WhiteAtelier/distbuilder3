@@ -117,12 +117,17 @@ roah::distb::config::impl::StepCMakeConfigureImpl::operator()(const WorkingConte
     }
     cmd.emplace_back(u8"-DCMAKE_DEBUG_POSTFIX=d");
     cmd.emplace_back(u8"-DCMAKE_CONFIGURATION_TYPES=Debug;Release");
+    if (const auto cxx_standard = context.resolveString("${cxxStandard}");  //
+        !cxx_standard.empty())
+    {
+        cmd.emplace_back(u8"-DCMAKE_CXX_STANDARD=" + utils::toU8String(cxx_standard));
+    }
 
     // Dependencies
     std::u8string deps;
     for (const auto & [lib_name, lib_hash] : context.getDependencies())
     {
-        deps += utils::toU8String(context.resolveString("${installRootDir}/" + lib_hash + ";"));
+        deps += utils::toU8String(context.resolveString("${installRootDir}/" + lib_name + "/" + lib_hash + ";"));
     }
     if (!deps.empty())
     {

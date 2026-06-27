@@ -146,6 +146,9 @@ target_compile_definitions(distbuilder
         $<$<PLATFORM_ID:Windows>:ROAH_ARCH_WIN32=1>
         $<$<PLATFORM_ID:MacOS>:ROAH_ARCH_MACOS=1>
         $<$<PLATFORM_ID:Linux>:ROAH_ARCH_LINUX=1>
+        DISTBUILDER3_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        DISTBUILDER3_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        DISTBUILDER3_VERSION_PATCH=${PROJECT_VERSION_PATCH}
 )
 
 set(ROAH_DISTB_CONF_PATH        "${CMAKE_CURRENT_BINARY_DIR}/distbuilder.conf")
@@ -158,8 +161,10 @@ configure_file(
 
 set_target_properties(distbuilder
     PROPERTIES
+        DEBUG_POSTFIX
+            "_d"
         VS_DEBUGGER_WORKING_DIRECTORY
             "${CMAKE_SOURCE_DIR}/test_project"
         VS_DEBUGGER_COMMAND_ARGUMENTS
-            "--verbose --export-presets --gather-licenses licenses"
+            "--verbose --export-presets --gather-licenses licenses ."
 )

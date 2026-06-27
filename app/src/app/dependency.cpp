@@ -88,8 +88,7 @@ roah::distb::app::Dependency::checkVersionRange(const std::vector<std::string> &
 
     std::unordered_set<std::string> selectable_versions;
 
-    const auto add_versions_fn = [&](const auto & start, const auto & last) {
-        const auto end = last + 1;
+    const auto add_versions_fn = [&](const auto & start, const auto & end) {
         for (auto iter = start; iter != end; ++iter)
         {
             selectable_versions.emplace(*iter);
@@ -121,12 +120,12 @@ roah::distb::app::Dependency::checkVersionRange(const std::vector<std::string> &
                 switch (mode)
                 {
                 case Mode::Point:
-                    add_versions_fn(iter, iter);
+                    add_versions_fn(iter, iter + 1);
                     begin = iter + 1;
                     break;
                 case Mode::InRange:
                     // レンジの終端
-                    add_versions_fn(begin, iter);
+                    add_versions_fn(begin, iter + 1);
                     begin = iter + 1;
                     mode  = Mode::Point;
                     break;
@@ -290,11 +289,12 @@ void
 roah::distb::app::Dependency::build(const AppConfig &                                   app_config,
                                     const bool                                          dryrun,
                                     const bool                                          force_build,
-                                    const std::unordered_map<std::string, Dependency> & all_dependencies)
+                                    const std::unordered_map<std::string, Dependency> & all_dependencies,
+                                    const std::string &                                 cxx_standard)
 {
     // ビルドできる状態であるとする.
     // まず state hash を計算する.
-    this->_calculateStateHash(all_dependencies);
+    this->_calculateStateHash(all_dependencies, cxx_standard);
 
     if (dryrun)
     {
@@ -338,6 +338,7 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     variables["cmakeBin"]       = utils::toString(app_config.getCMakeExecutable());
     variables["workingDir"]     = utils::toString(build_root.u8string());
     variables["installDir"]     = utils::toString(install_dir.u8string());
+    variables["cxxStandard"]    = cxx_standard;
 
     std::unordered_map<std::string, std::string> dependencies;
     for (const auto & name : this->resolved_dependencies_)
@@ -431,11 +432,13 @@ roah::distb::app::Dependency::copyLicenseFile(const AppConfig &             app_
 }
 
 void
-roah::distb::app::Dependency::_calculateStateHash(const std::unordered_map<std::string, Dependency> & all_dependencies)
+roah::distb::app::Dependency::_calculateStateHash(const std::unordered_map<std::string, Dependency> & all_dependencies,
+                                                  const std::string &                                 cxx_standard)
 {
     // 現在の状態をハッシュ化する.
     std::stringstream state;
     state << "version=" << this->version_ << std::endl;
+    state << "cxxStandard=" << cxx_standard << std::endl;
     state << "[options]" << std::endl;
     for (const auto & [key, value] : this->options_)
     {

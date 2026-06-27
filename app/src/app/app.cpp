@@ -17,6 +17,7 @@
 #include <toml.hpp>
 
 #include <cstdint>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -84,6 +85,7 @@ private:
     std::filesystem::path                          source_dir_;
     std::filesystem::path                          deps_file_path_;
     std::filesystem::path                          cmake_preset_file_path_;
+    std::string                                    cxx_standard_;
     //
     LibraryStore                                   library_store_;
     //
@@ -255,13 +257,17 @@ roah::distb::app::App::run(int argc, const char * const argv[])
 void
 roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
 {
+    cli_app.set_version_flag(
+        "--version",
+        std::format("{}.{}.{}", DISTBUILDER3_VERSION_MAJOR, DISTBUILDER3_VERSION_MINOR, DISTBUILDER3_VERSION_PATCH));
+
     cli_app
         .add_option(  //
             "-c,--config",
             this->a_config_file_,
             "Path to the configuration file."
 #ifdef ROAH_ARCH_WIN32
-            " (default: %APPDATA%\\distbuilder.conf)"
+            " (default: %USERPROFILE%\\distbuilder.conf)"
 #elif defined(ROAH_ARCH_MACOS)
 #    error "unsupported platform"
 #elif defined(ROAH_ARCH_LINUX)
@@ -305,9 +311,9 @@ roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
         .add_option(  //
             "sourceDir",
             this->a_source_dir_,
-            "Path to the source directory. (default: current directory.)")
+            "Path to the source directory.")
         ->check(CLI::ExistingDirectory)
-        ->default_val(this->a_source_dir_);
+        ->required(true);
 }
 
 // ============================================================================================= //
@@ -404,8 +410,28 @@ roah::distb::app::App::Impl_::_parseDeps()
     try
     {
         const auto root = toml::parse_str(content);
+
+        if (root.contains("cxx_standard"))
+        {
+            const auto & t_cxx_standard = root.at("cxx_standard");
+            AppError::check(t_cxx_standard.is_string() || t_cxx_standard.is_integer(),
+                            "deps.toml: cxx_standard must be a integer or string.");
+            if (t_cxx_standard.is_string())
+            {
+                this->cxx_standard_ = t_cxx_standard.as_string();
+            }
+            else if (t_cxx_standard.is_integer())
+            {
+                this->cxx_standard_ = std::to_string(t_cxx_standard.as_integer());
+            }
+        }
+
         for (const auto & [author, t_author] : root.as_table())
         {
+            if (!t_author.is_table())
+            {
+                continue;
+            }
             for (const auto & [repo, t_repo] : t_author.as_table())
             {
                 logger.log("[ Dependency ] Author: {}, Repo: {}", author, repo);
@@ -533,7 +559,11 @@ roah::distb::app::App::Impl_::_buildDeps()
 
                 try
                 {
-                    dep.build(this->app_config_, this->a_no_build_, this->a_force_build_, this->all_dependencies_);
+                    dep.build(this->app_config_,
+                              this->a_no_build_,
+                              this->a_force_build_,
+                              this->all_dependencies_,
+                              this->cxx_standard_);
                 }
                 catch (...)
                 {
@@ -828,6 +858,13 @@ roah::distb::app::App::Impl_::_exportCMakePresets() const
                          .u8string();
         }
         env["CMAKE_PREFIX_PATH"] = utils::toString(paths);
+
+        // CXX Standard の指定がある場合は, ARGS に追加する
+        if (!this->cxx_standard_.empty())
+        {
+            auto & args                = j_preset.get()["cacheVariables"];
+            args["CMAKE_CXX_STANDARD"] = this->cxx_standard_;
+        }
     }
 
     // 書き出す
