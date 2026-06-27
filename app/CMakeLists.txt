@@ -27,8 +27,6 @@ roah_add_library(distb-utils
         utils/path.cpp
         utils/string_expander.cpp
         utils/string.cpp
-        
-        utils/impl/generator.hpp
 
     HEADERS
         roah/distb/utils/base32.hpp

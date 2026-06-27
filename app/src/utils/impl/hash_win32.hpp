@@ -1,8 +1,6 @@
 #ifndef ROAH_DISTB_UTILS_IMPL_HASH_WIN32_HPP
 #define ROAH_DISTB_UTILS_IMPL_HASH_WIN32_HPP
 
-#include "generator.hpp"
-
 // windows.h を先にインクルードする必要あり
 #include <windows.h>
 //
