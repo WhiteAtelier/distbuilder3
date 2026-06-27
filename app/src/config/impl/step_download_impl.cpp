@@ -74,7 +74,7 @@ roah::distb::config::impl::StepDownloadImpl::operator()(const WorkingContext & c
                                    });
     if (result.exit_code != 0)
     {
-        throw std::runtime_error{ "StepDownloadImpl: curl exited with code " + std::to_string(result.exit_code) + "." };
+        throw AppError{ "StepDownloadImpl: curl exited with code " + std::to_string(result.exit_code) + "." };
     }
 
     // 再度 hash 検証
