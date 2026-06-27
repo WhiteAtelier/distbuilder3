@@ -18,28 +18,11 @@ roah::distb::app::AppConfig::_getDefaultFilePath()
 {
 #if defined(ROAH_ARCH_WIN32)
     PWSTR psz_path = NULL;
-    if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &psz_path)))
-    {
-        throw AppError{ "Failed to get AppData path." };
-    }
-    auto ret = std::filesystem::path{ psz_path } / "roah" / "distbuilder.conf";
-    CoTaskMemFree(psz_path);
-    return ret;
-#else
-    static_assert(false && "Unsupported platform");
-#endif
-}
-
-std::filesystem::path
-roah::distb::app::AppConfig::_getDefaultInstallDirectory()
-{
-#if defined(ROAH_ARCH_WIN32)
-    PWSTR psz_path = NULL;
     if (FAILED(SHGetKnownFolderPath(FOLDERID_Profile, 0, NULL, &psz_path)))
     {
         throw AppError{ "Failed to get User Profile path." };
     }
-    auto ret = std::filesystem::path{ psz_path } / "distb";
+    auto ret = std::filesystem::path{ psz_path } / "distbuilder.conf";
     CoTaskMemFree(psz_path);
     return ret;
 #else
@@ -58,5 +41,39 @@ roah::distb::app::AppConfig::_getDefaultBuildDirectory()
     return std::filesystem::path{ path } / L"distb_buildtmp";
 #else
     return std::filesystem::temp_directory_path() / "distb_buildtmp";
+#endif
+}
+
+std::filesystem::path
+roah::distb::app::AppConfig::_getDefaultInstallDirectory()
+{
+#if defined(ROAH_ARCH_WIN32)
+    PWSTR psz_path = NULL;
+    if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &psz_path)))
+    {
+        throw AppError{ "Failed to get AppData path." };
+    }
+    auto ret = std::filesystem::path{ psz_path } / "distb";
+    CoTaskMemFree(psz_path);
+    return ret;
+#else
+    static_assert(false && "Unsupported platform");
+#endif
+}
+
+std::filesystem::path
+roah::distb::app::AppConfig::_getAppStoragePath()
+{
+#if defined(ROAH_ARCH_WIN32)
+    PWSTR psz_path = NULL;
+    if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &psz_path)))
+    {
+        throw AppError{ "Failed to get AppData path." };
+    }
+    auto ret = std::filesystem::path{ psz_path } / "distbuilder";
+    CoTaskMemFree(psz_path);
+    return ret;
+#else
+    static_assert(false && "Unsupported platform");
 #endif
 }

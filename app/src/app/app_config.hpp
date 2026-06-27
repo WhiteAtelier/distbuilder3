@@ -23,13 +23,6 @@ public:
     operator=(AppConfig &&)
         = delete;
 
-    void
-    setForceBuild(const bool force_build) noexcept;
-
-    [[nodiscard]]
-    bool
-    isForceBuild() const noexcept;
-
     [[nodiscard]]
     const std::filesystem::path &
     getFilePath() const noexcept;
@@ -42,6 +35,9 @@ public:
 
     const std::filesystem::path &
     getExecutableDirectory() const noexcept;
+
+    const std::filesystem::path &
+    getAppStoragePath() const noexcept;
 
     const std::filesystem::path &
     getBuildDirectory() const noexcept;
@@ -61,6 +57,12 @@ public:
     const std::u8string &
     getArchitecture() const noexcept;
 
+    const std::u8string &
+    getCMakePresetsDefaultBuildDir() const noexcept;
+
+    const std::u8string &
+    getCMakePresetsDefaultInstallDir() const noexcept;
+
 private:
     static std::filesystem::path
     _getDefaultFilePath();
@@ -71,10 +73,16 @@ private:
     static std::filesystem::path
     _getDefaultInstallDirectory();
 
+    static std::filesystem::path
+    _getAppStoragePath();
+
+    void
+    _createTemplate();
+
     const std::filesystem::path        executable_dir_;
+    const std::filesystem::path        app_storage_path_;
     const std::filesystem::path        default_search_path_;
     //
-    bool                               force_build_;
     std::filesystem::path              file_path_;
     std::filesystem::path              build_dir_;
     std::filesystem::path              install_dir_;
@@ -82,6 +90,8 @@ private:
     std::u8string                      cmake_executable_;
     std::u8string                      generator_;
     std::u8string                      architecture_;
+    std::u8string                      cmake_presets_default_build_dir_;
+    std::u8string                      cmake_presets_default_install_dir_;
 };
 
 }  // namespace roah::distb::app

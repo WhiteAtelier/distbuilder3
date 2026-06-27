@@ -69,7 +69,10 @@ public:
     getStateHash() const noexcept;
 
     void
-    build(const AppConfig & app_config, const std::unordered_map<std::string, Dependency> & all_dependencies);
+    build(const AppConfig &                                   app_config,
+          const bool                                          dryrun,
+          const bool                                          force_build,
+          const std::unordered_map<std::string, Dependency> & all_dependencies);
 
 private:
     bool

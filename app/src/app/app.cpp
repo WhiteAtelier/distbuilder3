@@ -2,19 +2,24 @@
 
 #include "app_config.hpp"
 #include "dependency.hpp"
+#include "library_store.hpp"
 #include "working_context_impl.hpp"
 //
 #include "roah/distb/errors.hpp"
 #include "roah/distb/logger.hpp"
+#include "roah/distb/utils/path.hpp"
 #include "roah/distb/utils/string.hpp"
 #include "roah/distb/utils/subprocess.hpp"
 
 #include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
 
 #include <toml.hpp>
 
+#include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <ranges>
 #include <regex>
 #include <set>
@@ -56,18 +61,30 @@ private:
     _buildDeps();
 
     void
-    _updateDepsToml();
+    _updateDepsToml() const;
+
+    void
+    _exportCMakePresets() const;
 
     using DependencyRef = std::reference_wrapper<Dependency>;
 
     bool                                           a_verbose_;
     bool                                           a_force_build_;
+    bool                                           a_no_build_;
     std::string                                    a_config_file_;
     std::string                                    a_source_dir_;
+    std::string                                    a_cmake_preset_file_;
+    std::optional<std::vector<std::string>>        a_cmake_preset_names_;
+    std::string                                    a_licenses_dir_;
     //
     AppConfig                                      app_config_;
     std::filesystem::path                          source_dir_;
     std::filesystem::path                          deps_file_path_;
+    std::filesystem::path                          cmake_preset_file_path_;
+    //
+    LibraryStore                                   library_store_;
+    //
+    CMakeVersion                                   cmake_version_;
     //
     std::unordered_map<std::string, DependencyRef> dependencies_;
     std::unordered_map<std::string, Dependency>    all_dependencies_;
@@ -75,14 +92,23 @@ private:
 
 }  // namespace roah::distb::app
 
+roah::distb::app::CMakeVersion::CMakeVersion() noexcept
+    : major{ 0 }
+    , minor{ 0 }
+    , patch{ 0 }
+{}
+
 // ============================================================================================= //
 // Constructor / Destructor
 // ============================================================================================= //
 roah::distb::app::App::Impl_::Impl_(std::filesystem::path executable_dir)
     : a_verbose_{ false }
     , a_force_build_{ false }
+    , a_no_build_{ false }
     , a_source_dir_{ "." }
+    , a_cmake_preset_file_{ "./CMakeUserPresets.json" }
     , app_config_{ std::move(executable_dir) }
+    , library_store_{ this->app_config_ }
 {}
 
 roah::distb::app::App::App(std::filesystem::path executable_dir)
@@ -138,9 +164,6 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
     // Set verbose logging
     logger.setVerbose(this->a_verbose_);
 
-    // Force build
-    this->app_config_.setForceBuild(this->a_force_build_);
-
     // Load AppConfig
     if (!this->a_config_file_.empty())
     {
@@ -152,6 +175,9 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
 
     // Validate/Initialize configuration
     this->_initialize();
+
+    // Check update of libraries
+    this->library_store_.fetch();
 
     // Parse deps file
     this->_parseDeps();
@@ -171,6 +197,9 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
 
     // Update deps.full.toml
     this->_updateDepsToml();
+
+    // Export CMakePresets
+    this->_exportCMakePresets();
 
     return 0;
 }
@@ -238,11 +267,32 @@ roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
 
     cli_app  //
         .add_flag("-v,--verbose", this->a_verbose_, "Enable verbose logging.")
-        ->default_val(this->a_verbose_);
+        ->default_val(this->a_verbose_)
+        ->capture_default_str();
 
     cli_app  //
         .add_flag("-f,--force", this->a_force_build_, "Force (re)build.")
-        ->default_val(this->a_force_build_);
+        ->default_val(this->a_force_build_)
+        ->capture_default_str();
+
+    cli_app  //
+        .add_flag("--no-build", this->a_no_build_, "Skip build step.")
+        ->default_val(this->a_no_build_)
+        ->capture_default_str();
+
+    cli_app  //
+        .add_option("--export-presets", this->a_cmake_preset_names_, "CMake preset configure name(s) to setup.")
+        ->expected(0, 256)
+        ->default_str("$");
+
+    cli_app  //
+        .add_option("--preset-file", this->a_cmake_preset_file_, "CMake preset file to use.")
+        ->default_val(this->a_cmake_preset_file_)
+        ->capture_default_str();
+
+    cli_app  //
+        .add_option("--gather-licenses", this->a_licenses_dir_, "Directory to export licenses.")
+        ->default_val(this->a_licenses_dir_);
 
     cli_app
         .add_option(  //
@@ -275,6 +325,12 @@ roah::distb::app::App::Impl_::_initialize()
         std::filesystem::create_directories(install_dir);
     }
 
+    if (this->a_cmake_preset_names_)
+    {
+        // CMakePreset 出力する
+        this->cmake_preset_file_path_ = utils::makeAbsolutePath(this->a_cmake_preset_file_);
+    }
+
     {
         // cmake check
         AppError::check(!this->app_config_.getCMakeExecutable().empty(), "CMake executable is empty.");
@@ -286,11 +342,29 @@ roah::distb::app::App::Impl_::_initialize()
                                           });
 
         // cmake version 3.31.4
-        std::regex  version_regex{ R"(cmake version ([^\s]+))" };
+        std::regex  version_regex{ R"(cmake version (\d+)\.(\d+).(\d+))" };
         std::smatch version_match;
         const auto  result = std::regex_search(cmake_ret.stdout_output, version_match, version_regex);
         AppError::check(result, "CMake \'{}\' is not executable.", this->app_config_.getCMakeExecutable());
-        logger.log("CMake \'{}\' is available.", version_match[1].str());
+
+        this->cmake_version_.major = std::stoul(version_match[1].str());
+        this->cmake_version_.minor = std::stoul(version_match[2].str());
+        this->cmake_version_.patch = std::stoul(version_match[3].str());
+
+        if (!(this->cmake_version_.major >= 3 && this->cmake_version_.minor >= 19))
+        {
+            // 最低バージョンは 3.19.0
+            // CMakePresets の最低サポート
+            throw AppError{ "CMake version {}.{}.{} is not supported. Minimum required version is 3.19.0.",
+                            this->cmake_version_.major,
+                            this->cmake_version_.minor,
+                            this->cmake_version_.patch };
+        }
+
+        logger.log("CMake \'{}.{}.{}\' is available.",
+                   this->cmake_version_.major,
+                   this->cmake_version_.minor,
+                   this->cmake_version_.patch);
     }
 
     // source directory check
@@ -471,7 +545,7 @@ roah::distb::app::App::Impl_::_buildDeps()
                            dep.getRepo(),
                            dep.getVersion());
 
-                dep.build(this->app_config_, this->all_dependencies_);
+                dep.build(this->app_config_, this->a_no_build_, this->a_force_build_, this->all_dependencies_);
                 builts.emplace(name);
             }
             else
@@ -489,8 +563,11 @@ roah::distb::app::App::Impl_::_buildDeps()
     }
 }
 
+// ============================================================================================= //
+// [PRIVATE] _updateDepsToml()
+// ============================================================================================= //
 void
-roah::distb::app::App::Impl_::_updateDepsToml()
+roah::distb::app::App::Impl_::_updateDepsToml() const
 {
     // deps name を sort する.
     auto                  dep_name_range = this->dependencies_ | std::ranges::views::keys;
@@ -528,9 +605,9 @@ roah::distb::app::App::Impl_::_updateDepsToml()
 
         t_dep["options"] = std::move(t_opt);
 
-        t_dep.comments().emplace_back("hash: " + dep.getStateHash());
+        t_dep.comments().emplace_back(" hash: " + dep.getStateHash());
         t_dep.comments().emplace_back(
-            "path: "
+            " path: "
             + utils::toString((this->app_config_.getInstallDirectory() / name / dep.getStateHash()).u8string()));
     }
     std::stringstream sstr;
@@ -542,4 +619,226 @@ roah::distb::app::App::Impl_::_updateDepsToml()
 
     std::regex remove_author_object_line_re{ R"(\[[^.]+\])" };
     ofst << std::regex_replace(sstr.str(), remove_author_object_line_re, "") << std::endl;
+}
+
+// ============================================================================================= //
+// [PRIVATE] _exportCMakePresets()
+// ============================================================================================= //
+void
+roah::distb::app::App::Impl_::_exportCMakePresets() const
+{
+    if (!this->a_cmake_preset_names_)
+    {
+        // CMakePreset 出力しない.
+        return;
+    }
+    std::unordered_set<std::string> cmake_preset_names{ this->a_cmake_preset_names_->begin(),
+                                                        this->a_cmake_preset_names_->end() };
+
+    // CLI11 の仕様上, デフォルト値を "$" にしているので, それを除外する.
+    cmake_preset_names.erase("$");
+
+    nlohmann::json j_root{};
+    bool           new_file = true;
+
+    if (std::ifstream ifst{ this->cmake_preset_file_path_ }; ifst)
+    {
+        try
+        {
+            j_root   = nlohmann::json::parse(ifst);
+            new_file = false;
+        }
+        catch (const nlohmann::json::parse_error & e)
+        {
+            AppError::throw_("Failed to parse CMake preset file: {}\n{}",
+                             this->cmake_preset_file_path_.u8string(),
+                             e.what());
+        }
+    }
+
+    if (new_file)
+    {
+        // ひな形を作る
+
+        // --- versions ---
+        // >= 4.4 : 12
+        // >= 4.3 : 11
+        // >= 3.31 : 10
+        // >= 3.30 : 9
+        // >= 3.28 : 8
+        // >= 3.27 : 7
+        // >= 3.25 : 6
+        // >= 3.24 : 5
+        // >= 3.23 : 4
+        // >= 3.21 : 3
+        // >= 3.20 : 2
+        // >= 3.19 : 1
+        // このアプリの最低バージョンは 3.19 で絞っている.
+        int preset_version = 0;
+        if (this->cmake_version_.major >= 4)
+        {
+            if (this->cmake_version_.minor >= 4)
+            {
+                preset_version = 12;
+            }
+            else if (this->cmake_version_.minor >= 3)
+            {
+                preset_version = 11;
+            }
+            else
+            {
+                preset_version = 10;
+            }
+        }
+        else if (this->cmake_version_.major == 3)
+        {
+            if (this->cmake_version_.minor >= 31)
+            {
+                preset_version = 10;
+            }
+            else if (this->cmake_version_.minor >= 30)
+            {
+                preset_version = 9;
+            }
+            else if (this->cmake_version_.minor >= 28)
+            {
+                preset_version = 8;
+            }
+            else if (this->cmake_version_.minor >= 27)
+            {
+                preset_version = 7;
+            }
+            else if (this->cmake_version_.minor >= 25)
+            {
+                preset_version = 6;
+            }
+            else if (this->cmake_version_.minor >= 24)
+            {
+                preset_version = 5;
+            }
+            else if (this->cmake_version_.minor >= 23)
+            {
+                preset_version = 4;
+            }
+            else if (this->cmake_version_.minor >= 21)
+            {
+                preset_version = 3;
+            }
+            else if (this->cmake_version_.minor >= 20)
+            {
+                preset_version = 2;
+            }
+            else if (this->cmake_version_.minor >= 19)
+            {
+                preset_version = 1;
+            }
+        }
+        AppError::check(preset_version > 0,
+                        "Unsupported CMake version (Failed to determine cmake preset version.): {}.{}",
+                        this->cmake_version_.major,
+                        this->cmake_version_.minor);
+        j_root["version"] = preset_version;
+    }
+
+    if (!j_root.contains("configurePresets"))
+    {
+        j_root["configurePresets"] = nlohmann::json::array();
+    }
+    auto & j_conf_presets = j_root["configurePresets"];
+    AppError::check(j_conf_presets.is_array(), "CMake preset file is invalid: configurePresets is not an object.");
+
+    const auto setup_fn = [this](auto & j_obj, std::string name) {
+        j_obj["name"] = std::move(name);
+        if (const auto path = this->app_config_.getCMakePresetsDefaultBuildDir(); !path.empty())
+        {
+            j_obj["binaryDir"] = utils::toString(path);
+        }
+        if (const auto path = this->app_config_.getCMakePresetsDefaultInstallDir(); !path.empty())
+        {
+            j_obj["installDir"] = utils::toString(path);
+        }
+    };
+
+    std::vector<std::reference_wrapper<nlohmann::json>> target_presets;
+    if (cmake_preset_names.empty())
+    {
+        if (!j_conf_presets.empty())
+        {
+            // preset names について, 空配列の場合は先頭のプリセットのみ対象にする
+            target_presets.emplace_back(j_conf_presets.front());
+        }
+        else
+        {
+            // preset name の指定もなく, preset 配列も空の場合は, 新規に preset を作る.
+            auto & j = target_presets  //
+                           .emplace_back(*j_conf_presets.insert(j_conf_presets.begin(), nlohmann::json::object()))
+                           .get();
+            setup_fn(j, "default");
+        }
+    }
+    else
+    {
+        if (!j_conf_presets.empty())
+        {
+            // すでにプリセットが用意されていて,
+            // 名前の指定がある場合は, その名前の preset を探す.
+            for (const auto & preset_name : cmake_preset_names)
+            {
+                bool found = false;
+                for (auto & j : j_conf_presets)
+                {
+                    if (j.contains("name") && j["name"].is_string() && j["name"] == preset_name)
+                    {
+                        target_presets.emplace_back(j);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    // 見つからなかった場合はエラーにする.
+                    throw AppError{ "CMake preset file does not contain preset with name: {}", preset_name };
+                }
+            }
+        }
+        else
+        {
+            // 名前が指定されているが, preset 配列が空の場合は, 新規に preset を作る.
+            for (const auto & preset_name : cmake_preset_names)
+            {
+                auto & j = target_presets
+                               .emplace_back(*j_conf_presets.insert(j_conf_presets.begin(), nlohmann::json::object()))
+                               .get();
+                setup_fn(j, preset_name);
+            }
+        }
+    }
+
+    // 構築する
+    for (auto & j_preset : target_presets)
+    {
+        // 環境変数として追加する
+        auto & env = j_preset.get()["environment"];
+
+        std::u8string paths;
+        for (const auto & dep : this->all_dependencies_ | std::ranges::views::values)
+        {
+            if (!paths.empty())
+            {
+                paths += u8";";
+            }
+            paths += (this->app_config_.getInstallDirectory()    //
+                      / (dep.getAuthor() + "." + dep.getRepo())  //
+                      / dep.getStateHash())
+                         .u8string();
+        }
+        env["CMAKE_PREFIX_PATH"] = utils::toString(paths);
+    }
+
+    // 書き出す
+    std::ofstream ofst{ this->cmake_preset_file_path_ };
+    AppError::check(ofst, "Failed to open file for writing: {}", this->cmake_preset_file_path_.u8string());
+    ofst << j_root.dump(4) << std::endl;
+
+    logger.log("CMake preset file updated: {}", this->cmake_preset_file_path_.u8string());
 }

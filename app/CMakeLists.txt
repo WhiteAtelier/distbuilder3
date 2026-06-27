@@ -119,6 +119,8 @@ roah_add_executable(distbuilder
         app/app.hpp
         app/dependency.cpp
         app/dependency.hpp
+        app/library_store.cpp
+        app/library_store.hpp
         app/working_context_impl.cpp
         app/working_context_impl.hpp
 )
@@ -131,7 +133,7 @@ target_compile_definitions(distbuilder
 )
 
 set(ROAH_DISTB_CONF_PATH        "${CMAKE_CURRENT_BINARY_DIR}/distbuilder.conf")
-set(ROAH_DISTB_CONF_SEARCH_PATH "\"${CMAKE_SOURCE_DIR}/libs\"")
+set(ROAH_DISTB_CONF_SEARCH_PATH "\"S:/works/programming/distbuilder3-libraries/libs\"")
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/distbuilder.in.conf"
     "${ROAH_DISTB_CONF_PATH}"
@@ -143,5 +145,5 @@ set_target_properties(distbuilder
         VS_DEBUGGER_WORKING_DIRECTORY
             "${CMAKE_SOURCE_DIR}/test_project"
         VS_DEBUGGER_COMMAND_ARGUMENTS
-            "--config ${ROAH_DISTB_CONF_PATH} --verbose"
+            "--verbose --export-presets --gather-licenses licenses"
 )

@@ -221,6 +221,8 @@ roah::distb::app::Dependency::getStateHash() const noexcept
 
 void
 roah::distb::app::Dependency::build(const AppConfig &                                   app_config,
+                                    const bool                                          dryrun,
+                                    const bool                                          force_build,
                                     const std::unordered_map<std::string, Dependency> & all_dependencies)
 {
     // option をマージする
@@ -235,11 +237,17 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     // まず state hash を計算する.
     this->_calculateStateHash(all_dependencies);
 
+    if (dryrun)
+    {
+        logger.log("Dependency {}.{}: Dry run. Skip build.", this->getAuthor(), this->getRepo());
+        return;
+    }
+
     // インストールディレクトリが存在した場合はスキップにする.
     const auto install_dir = app_config.getInstallDirectory()             //
                            / (this->getAuthor() + "." + this->getRepo())  //
                            / this->state_hash_;
-    if (!app_config.isForceBuild() && std::filesystem::exists(install_dir))
+    if (!force_build && std::filesystem::exists(install_dir))
     {
         logger.log("Dependency {}.{}: Already built. Skip.", this->getAuthor(), this->getRepo());
         return;
