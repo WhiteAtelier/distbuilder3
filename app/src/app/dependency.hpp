@@ -47,7 +47,7 @@ public:
     getVersion() const noexcept;
 
     bool
-    checkVersionRange(const std::vector<std::string> & version_range);
+    checkVersionRange(const std::vector<std::string> & version_range) const;
 
     template <typename T>
     utils::OptionValue &
@@ -73,6 +73,9 @@ public:
           const bool                                          dryrun,
           const bool                                          force_build,
           const std::unordered_map<std::string, Dependency> & all_dependencies);
+
+    void
+    copyLicenseFile(const AppConfig & app_config, const std::filesystem::path & output_dir) const;
 
 private:
     bool

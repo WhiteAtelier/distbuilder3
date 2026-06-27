@@ -128,5 +128,5 @@ roah::distb::config::impl::StepCMakeInstallAllImpl::clone() const
 void
 roah::distb::config::impl::StepCMakeInstallAllImpl::loadFromJson(const nlohmann::json & json)
 {
-    this->_getStringFromJson(kCmd, json, "buildDir", this->build_dir_);
+    this->_getStringFromJson(kCmd, json, "build_dir", this->build_dir_);
 }

@@ -33,14 +33,14 @@ roah::distb::config::impl::StepCMakeConfigureImpl::~StepCMakeConfigureImpl() noe
 void
 roah::distb::config::impl::StepCMakeConfigureImpl::operator()(const WorkingContext & context) const
 {
-    AppError::check(!this->src_dir_.empty(), "Source directory is empty.");
+    AppError::check(!this->source_dir_.empty(), "Source directory is empty.");
     AppError::check(!this->build_dir_.empty(), "Build directory is empty.");
 
-    logger.log("CMake Configure: {} -> {}", this->src_dir_, this->build_dir_);
+    logger.log("CMake Configure: {} -> {}", this->source_dir_, this->build_dir_);
 
     // Path を決定する
     const auto & root      = context.getCurrentWorkingDirectory();
-    const auto   src_dir   = utils::makeAbsolutePath(root / context.resolveString(this->src_dir_));
+    const auto   src_dir   = utils::makeAbsolutePath(root / context.resolveString(this->source_dir_));
     const auto   build_dir = utils::makeAbsolutePath(root / context.resolveString(this->build_dir_));
     logger.trace("Working directory: {}", root.u8string());
     logger.trace("Resolved source directory path: {}", src_dir.u8string());
@@ -165,8 +165,8 @@ roah::distb::config::impl::StepCMakeConfigureImpl::clone() const
 void
 roah::distb::config::impl::StepCMakeConfigureImpl::loadFromJson(const nlohmann::json & json)
 {
-    this->_getStringFromJson(kCmd, json, "srcDir", this->src_dir_);
-    this->_getStringFromJson(kCmd, json, "buildDir", this->build_dir_);
+    this->_getStringFromJson(kCmd, json, "source_dir", this->source_dir_);
+    this->_getStringFromJson(kCmd, json, "build_dir", this->build_dir_);
 
     if (const auto i_args = json.find("args"); i_args != json.end())
     {

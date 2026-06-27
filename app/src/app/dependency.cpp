@@ -82,7 +82,7 @@ roah::distb::app::Dependency::getVersion() const noexcept
 }
 
 bool
-roah::distb::app::Dependency::checkVersionRange(const std::vector<std::string> & version_range)
+roah::distb::app::Dependency::checkVersionRange(const std::vector<std::string> & version_range) const
 {
     const auto all_versions = this->library_conf_.getAllVersions();
 
@@ -136,7 +136,7 @@ roah::distb::app::Dependency::checkVersionRange(const std::vector<std::string> &
             {
                 // 指定したバージョンが見つからない場合はエラー
                 throw DependencyResolveError{
-                    "Dependency {}.{}: Version '{}' is not found in the library or invalid order.",
+                    "Dependency {}.{}: Version '{}' is not found (not defined) in the library or invalid order.",
                     this->getAuthor(),
                     this->getRepo(),
                     v
@@ -193,6 +193,29 @@ roah::distb::app::Dependency::loadLibraryConfig(const AppConfig & app_config)
         }
     }
     AppError::throw_("Library config '{}' is not found.", file_name);
+}
+
+bool
+roah::distb::app::Dependency::_loadLibraryConfig(const std::filesystem::path & path)
+{
+    std::ifstream ifst{ path };
+    if (ifst)
+    {
+        this->library_conf_.loadFromJson(ifst);
+
+        if (this->version_.empty())
+        {
+            // 最新をセットする.
+            const auto & versions = this->library_conf_.getAllVersions();
+            if (versions.empty())
+            {
+                throw LibraryConfigError{ "{}.{}: No available version.", this->getAuthor(), this->getRepo() };
+            }
+            this->version_ = versions.back();
+        }
+        return true;
+    }
+    return false;
 }
 
 const roah::distb::config::Library &
@@ -255,6 +278,14 @@ roah::distb::app::Dependency::build(const AppConfig &                           
 
     const auto & le = this->getLibraryEntityConfigOfSelectedVersion();
 
+    // license が設定されていない場合はエラーにする.
+    if (le.getLicenseFilePath().empty())
+    {
+        throw LibraryConfigError{ "Dependency {}.{}: License file path is not specified in the library config.",
+                                  this->getAuthor(),
+                                  this->getRepo() };
+    }
+
     // ビルド用のディレクトリを作る
     const auto build_root = app_config.getBuildDirectory()               //
                           / (this->getAuthor() + "." + this->getRepo())  //
@@ -284,9 +315,36 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     }
 
     std::unordered_map<std::string, std::string> dependencies;
-    for (const auto & name : le.getDependencies() | std::ranges::views::keys)
+    for (const auto & [name, req_dep] : le.getDependencies())
     {
-        dependencies[name] = all_dependencies.at(name).getStateHash();
+        // 依存のバージョン一致を判定する.
+        const auto & dep = all_dependencies.at(name);
+        if (!dep.checkVersionRange(req_dep.getRequiredVersionRange()))
+        {
+            std::string version_range_str;
+            for (const auto & v : req_dep.getRequiredVersionRange())
+            {
+                if (!version_range_str.empty())
+                {
+                    version_range_str += ", ";
+                }
+                version_range_str += v;
+            }
+
+            throw DependencyResolveError{
+                "Library {}.{}, Version '{}' is required Library {}.{} in version range [{}], "
+                "but version '{}' is selected.",
+                this->getAuthor(),
+                this->getRepo(),
+                this->getVersion(),
+                dep.getAuthor(),
+                dep.getRepo(),
+                version_range_str,
+                dep.getVersion()
+            };
+        }
+
+        dependencies[name] = dep.getStateHash();
     }
 
     // WorkingContext を作成する.
@@ -294,6 +352,56 @@ roah::distb::app::Dependency::build(const AppConfig &                           
 
     // ビルド開始
     le.build(working_ctx);
+}
+
+void
+roah::distb::app::Dependency::copyLicenseFile(const AppConfig &             app_config,
+                                              const std::filesystem::path & output_dir) const
+{
+    config::Variables variables;
+    variables["version"] = this->version_;
+    for (const auto & [key, value] : this->options_)
+    {
+        variables["options." + key] = value;
+    }
+
+    const auto & le          = this->getLibraryEntityConfigOfSelectedVersion();
+    const auto   install_dir = app_config.getInstallDirectory()           //
+                           / (this->getAuthor() + "." + this->getRepo())  //
+                           / this->state_hash_;
+
+    if (le.getLicenseFilePath() == "!NoLicense")
+    {
+        // 明示的にライセンスファイルがないと指定されている場合はコピーしない.
+        return;
+    }
+    if (le.getLicenseFilePath().empty())
+    {
+        // ライセンスファイルのパスが空の場合はエラー
+        throw LibraryConfigError{ "Dependency {}.{}: License file path is not specified in the library config.",
+                                  this->getAuthor(),
+                                  this->getRepo() };
+    }
+
+    const auto src_file_path = install_dir / utils::toU8String(le.getLicenseFilePath());
+    const auto dst_file_path
+        = output_dir
+        / (utils::toU8String(this->getAuthor() + "." + this->getRepo() + ".") + src_file_path.filename().u8string());
+
+    if (!std::filesystem::exists(src_file_path))
+    {
+        throw LibraryConfigError{ "Dependency {}.{}: License file '{}' is not found in the install directory.",
+                                  this->getAuthor(),
+                                  this->getRepo(),
+                                  src_file_path.u8string() };
+    }
+
+    logger.trace("Dependency {}.{}: Copy license file: {} -> {}",
+                 this->getAuthor(),
+                 this->getRepo(),
+                 src_file_path.u8string(),
+                 dst_file_path.u8string());
+    std::filesystem::copy(src_file_path, dst_file_path, std::filesystem::copy_options::overwrite_existing);
 }
 
 void
@@ -322,27 +430,4 @@ roah::distb::app::Dependency::_calculateStateHash(const std::unordered_map<std::
     hash.addData(state_str.data(), state_str.size());
     const auto hash_bin = hash.getHashBinary();
     this->state_hash_   = utils::encodeBase32(hash_bin.data(), hash_bin.size(), /*small char*/ true);
-}
-
-bool
-roah::distb::app::Dependency::_loadLibraryConfig(const std::filesystem::path & path)
-{
-    std::ifstream ifst{ path };
-    if (ifst)
-    {
-        this->library_conf_.loadFromJson(ifst);
-
-        if (this->version_.empty())
-        {
-            // 最新をセットする.
-            const auto & versions = this->library_conf_.getAllVersions();
-            if (versions.empty())
-            {
-                throw LibraryConfigError{ "{}.{}: No available version.", this->getAuthor(), this->getRepo() };
-            }
-            this->version_ = versions.back();
-        }
-        return true;
-    }
-    return false;
 }

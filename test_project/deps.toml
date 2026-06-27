@@ -1,2 +1,6 @@
 
-[facebook.zstd]
+[gabime.spdlog]
+version = "1.15.2"
+
+[fmtlib.fmt]
+version = "11.1.4"

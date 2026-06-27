@@ -128,8 +128,13 @@ roah::distb::config::Library::findLibraryEntryByVersion(const std::string & vers
 std::vector<std::string>
 roah::distb::config::Library::getAllVersions() const
 {
-    const auto iter_range = this->entries_version_map_ | std::ranges::views::keys;
-    return std::vector<std::string>{ iter_range.begin(), iter_range.end() };
+    std::vector<std::string> versions;
+    versions.reserve(this->entries_.size());
+    for (const auto & entry : this->entries_)
+    {
+        versions.emplace_back(entry.get().getVersion());
+    }
+    return versions;
 }
 
 void

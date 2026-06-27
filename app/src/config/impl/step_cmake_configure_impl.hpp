@@ -44,7 +44,7 @@ private:
         // condition
     };
 
-    std::string                       src_dir_;
+    std::string                       source_dir_;
     std::string                       build_dir_;
     std::map<std::string, ArgsSubset> args_;
 };

@@ -56,6 +56,9 @@ public:
     const std::vector<std::string> &
     getStepOrder() const noexcept;
 
+    const std::string &
+    getLicenseFilePath() const noexcept;
+
     void
     build(const WorkingContext & working_ctx) const;
 
@@ -96,6 +99,7 @@ private:
     std::unordered_map<std::string, DependencySpec>     dependencies_;
     std::vector<std::string>                            order_;
     std::unordered_map<std::string, StepDefHolder>      steps_;
+    std::string                                         license_file_path_;
 };
 
 }  // namespace roah::distb::config

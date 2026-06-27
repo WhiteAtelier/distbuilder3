@@ -24,9 +24,10 @@ void
 roah::distb::config::LibraryEntry::setBase(const LibraryEntry & base_entry)
 {
     // copy
-    this->options_      = base_entry.options_;
-    this->dependencies_ = base_entry.dependencies_;
-    this->order_        = base_entry.order_;
+    this->options_           = base_entry.options_;
+    this->dependencies_      = base_entry.dependencies_;
+    this->order_             = base_entry.order_;
+    this->license_file_path_ = base_entry.license_file_path_;
 
     this->steps_.clear();
     for (const auto & [key, ptr] : base_entry.steps_)
@@ -176,6 +177,15 @@ roah::distb::config::LibraryEntry::updateFromJson(const nlohmann::json & json)
             }
         }
     }
+
+    if (auto i_license = json.find("license"); i_license != json.end())
+    {
+        if (!i_license->is_string())
+        {
+            throw LibraryConfigError{ "Invalid 'license' field: expected a string." };
+        }
+        this->license_file_path_ = i_license->get<std::string>();
+    }
 }
 
 const std::string &
@@ -200,6 +210,12 @@ const std::vector<std::string> &
 roah::distb::config::LibraryEntry::getStepOrder() const noexcept
 {
     return this->order_;
+}
+
+const std::string &
+roah::distb::config::LibraryEntry::getLicenseFilePath() const noexcept
+{
+    return this->license_file_path_;
 }
 
 void

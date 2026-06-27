@@ -66,6 +66,9 @@ private:
     void
     _exportCMakePresets() const;
 
+    void
+    _gatherLicenseFiles() const;
+
     using DependencyRef = std::reference_wrapper<Dependency>;
 
     bool                                           a_verbose_;
@@ -201,6 +204,10 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
     // Export CMakePresets
     this->_exportCMakePresets();
 
+    // Gather license files
+    this->_gatherLicenseFiles();
+
+    logger.log("Completed!");
     return 0;
 }
 
@@ -474,23 +481,9 @@ roah::distb::app::App::Impl_::_resolveDeps(const std::vector<std::string> & libr
         const auto & child_deps = le.getDependencies();
         for (const auto & child_dep : child_deps | std::ranges::views::values)
         {
-            // todo: condition 評価
-            if (const auto [iter, added]
-                = this->all_dependencies_.try_emplace(child_dep.getName(), child_dep.getName());
-                !added)
-            {
-                // バージョンチェック
-                if (!iter->second.checkVersionRange(child_dep.getRequiredVersionRange()))
-                {
-                    throw DependencyResolveError{
-                        "Dependency {}.{}: Version '{}' is not compatible with the required range.",
-                        iter->second.getAuthor(),
-                        iter->second.getRepo(),
-                        iter->second.getVersion()
-                    };
-                }
-            }
-            else
+            // todo: condition 評価.
+
+            if (this->all_dependencies_.try_emplace(child_dep.getName(), child_dep.getName()).second)
             {
                 // 新しく追加された.
                 new_library_names.emplace_back(child_dep.getName());
@@ -545,7 +538,16 @@ roah::distb::app::App::Impl_::_buildDeps()
                            dep.getRepo(),
                            dep.getVersion());
 
-                dep.build(this->app_config_, this->a_no_build_, this->a_force_build_, this->all_dependencies_);
+                try
+                {
+                    dep.build(this->app_config_, this->a_no_build_, this->a_force_build_, this->all_dependencies_);
+                }
+                catch (...)
+                {
+                    // Rethrow する前に, install directory を削除しておく
+                    std::filesystem::remove_all(this->app_config_.getInstallDirectory() / name / dep.getStateHash());
+                    throw;
+                }
                 builts.emplace(name);
             }
             else
@@ -841,4 +843,31 @@ roah::distb::app::App::Impl_::_exportCMakePresets() const
     ofst << j_root.dump(4) << std::endl;
 
     logger.log("CMake preset file updated: {}", this->cmake_preset_file_path_.u8string());
+}
+
+// ============================================================================================= //
+// [PRIVATE] _gatherLicenseFiles()
+// ============================================================================================= //
+void
+roah::distb::app::App::Impl_::_gatherLicenseFiles() const
+{
+    if (this->a_licenses_dir_.empty())
+    {
+        return;
+    }
+
+    const auto output_dir = utils::makeAbsolutePath(this->a_licenses_dir_);
+    logger.log("Gathering license files to: {}", output_dir.u8string());
+
+    // 消すことはしなくていいかな...
+    // 手動でほかのものも集めている可能性もあるので
+    if (!std::filesystem::exists(output_dir))
+    {
+        std::filesystem::create_directories(output_dir);
+    }
+
+    for (const auto & dep : this->all_dependencies_ | std::ranges::views::values)
+    {
+        dep.copyLicenseFile(this->app_config_, output_dir);
+    }
 }

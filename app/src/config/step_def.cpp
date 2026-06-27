@@ -4,6 +4,7 @@
 #include "impl/step_cmake_install_all_impl.hpp"
 #include "impl/step_download_impl.hpp"
 #include "impl/step_extract_impl.hpp"
+#include "impl/step_install_file_impl.hpp"
 #include "roah/distb/errors.hpp"
 
 #include <nlohmann/json.hpp>
@@ -90,10 +91,9 @@ roah::distb::config::makeStepDefFromJson(const nlohmann::json & json)
     }
 
     static std::unordered_map<std::string_view, std::function<std::unique_ptr<StepDef>()>> _generators{
-        DISTB_STEP(impl::StepDownloadImpl),
-        DISTB_STEP(impl::StepExtractImpl),
-        DISTB_STEP(impl::StepCMakeConfigureImpl),
-        DISTB_STEP(impl::StepCMakeInstallAllImpl),
+        DISTB_STEP(impl::StepDownloadImpl),       DISTB_STEP(impl::StepExtractImpl),
+        DISTB_STEP(impl::StepCMakeConfigureImpl), DISTB_STEP(impl::StepCMakeInstallAllImpl),
+        DISTB_STEP(impl::StepInstallFileImpl),
     };
 
     const auto i_cmd = json.find("cmd");

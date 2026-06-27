@@ -15,40 +15,41 @@ namespace {
 struct Preprocessor
 {
     virtual void
-    operator()(roah::distb::utils::OptionValue & val) const = 0;
-    virtual ~Preprocessor()                                 = default;
+    operator()(roah::distb::utils::OptionValue & val) const
+        = 0;
+    virtual ~Preprocessor() = default;
 };
 
 // 文字列値を小文字化するプリプロセッサ.
-struct LowerPreprocessor : Preprocessor
+struct LowerPreprocessor final : Preprocessor
 {
     void
     operator()(roah::distb::utils::OptionValue & val) const override
     {
         auto s = static_cast<std::string>(val);
-        std::transform(
-            s.begin(), s.end(), s.begin(),
-            [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        std::transform(s.begin(), s.end(), s.begin(), [](const unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
         val = roah::distb::utils::OptionValue{ std::move(s) };
     }
 };
 
 // 文字列値を大文字化するプリプロセッサ.
-struct UpperPreprocessor : Preprocessor
+struct UpperPreprocessor final : Preprocessor
 {
     void
     operator()(roah::distb::utils::OptionValue & val) const override
     {
         auto s = static_cast<std::string>(val);
-        std::transform(
-            s.begin(), s.end(), s.begin(),
-            [](const unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        std::transform(s.begin(), s.end(), s.begin(), [](const unsigned char c) {
+            return static_cast<char>(std::toupper(c));
+        });
         val = roah::distb::utils::OptionValue{ std::move(s) };
     }
 };
 
 // 任意の型の値を string 型の OptionValue に変換するプリプロセッサ.
-struct ToStrPreprocessor : Preprocessor
+struct ToStrPreprocessor final : Preprocessor
 {
     void
     operator()(roah::distb::utils::OptionValue & val) const override
@@ -57,9 +58,20 @@ struct ToStrPreprocessor : Preprocessor
     }
 };
 
+// bool 評価の not を取るプリプロセッサ.
+struct NotPreprocessor final : Preprocessor
+{
+    void
+    operator()(roah::distb::utils::OptionValue & val) const override
+    {
+        val = !static_cast<bool>(val);
+    }
+};
+
 static const LowerPreprocessor k_lower;
 static const UpperPreprocessor k_upper;
 static const ToStrPreprocessor k_to_str;
+static const NotPreprocessor   k_not;
 
 // プリプロセス名とプリプロセッサを対応させるレジストリ.
 // 新しいプリプロセスを追加する場合は, 上に struct を追加し static instance を定義してここに登録する.
@@ -67,15 +79,15 @@ static const std::unordered_map<std::string, const Preprocessor *> k_preprocesso
     { "lower", &k_lower },
     { "upper", &k_upper },
     { "to_str", &k_to_str },
+    { "not", &k_not },
 };
 
 }  // namespace
 
 bool
-roah::distb::utils::expandTemplate(
-    const std::string &                                  tmpl,
-    const std::unordered_map<std::string, OptionValue> & vars,
-    std::string &                                        result)
+roah::distb::utils::expandTemplate(const std::string &                                  tmpl,
+                                   const std::unordered_map<std::string, OptionValue> & vars,
+                                   std::string &                                        result)
 {
     result.clear();
     bool              all_expanded = true;
