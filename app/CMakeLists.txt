@@ -103,6 +103,8 @@ roah_add_library(distb-config
         config/impl/step_download_impl.hpp
         config/impl/step_extract_impl.cpp
         config/impl/step_extract_impl.hpp
+        config/impl/step_github_download_impl.cpp
+        config/impl/step_github_download_impl.hpp
         config/impl/step_install_file_impl.cpp
         config/impl/step_install_file_impl.hpp
 

@@ -3,6 +3,7 @@
 #include "roah/distb/errors.hpp"
 #include "roah/distb/logger.hpp"
 #include "roah/distb/utils/path.hpp"
+#include "roah/distb/utils/option_value.hpp"
 #include "roah/distb/utils/string.hpp"
 #include "roah/distb/utils/subprocess.hpp"
 #include "roah/distb/working_context.hpp"
@@ -16,22 +17,26 @@ roah::distb::config::impl::StepExtractImpl::StepExtractImpl()
     , error_ok_{ false }
 {}
 
+roah::distb::config::impl::StepExtractImpl::StepExtractImpl(const std::string_view cmd_name_driven_by,
+                                                            std::string            input,
+                                                            std::string            output,
+                                                            const bool             verbosity,
+                                                            const bool             error_ok)
+    : StepDef{ cmd_name_driven_by }
+    , input_{ std::move(input) }
+    , output_{ std::move(output) }
+    , verbosity_{ verbosity }
+    , error_ok_{ error_ok }
+{}
+
 roah::distb::config::impl::StepExtractImpl::StepExtractImpl(const StepExtractImpl &) = default;
 
 roah::distb::config::impl::StepExtractImpl::StepExtractImpl(StepExtractImpl &&) noexcept = default;
 
-roah::distb::config::impl::StepExtractImpl &
-roah::distb::config::impl::StepExtractImpl::operator=(const StepExtractImpl &)
-    = default;
-
-roah::distb::config::impl::StepExtractImpl &
-roah::distb::config::impl::StepExtractImpl::operator=(StepExtractImpl &&) noexcept
-    = default;
-
 roah::distb::config::impl::StepExtractImpl::~StepExtractImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepExtractImpl::operator()(const WorkingContext & context) const
+roah::distb::config::impl::StepExtractImpl::operator()(WorkingContext & context) const
 {
     AppError::check(!this->input_.empty(), "Input is empty.");
     AppError::check(!this->output_.empty(), "Output path is empty.");
@@ -49,16 +54,16 @@ roah::distb::config::impl::StepExtractImpl::operator()(const WorkingContext & co
     // ".." などで root の外に出ている可能性がある.
     if (!utils::isSubDirectory(root, input))
     {
-        throw LibraryConfigError{ "StepExtractImpl: input path is outside of the working directory." };
+        throw LibraryConfigError{ "{}: input path is outside of the working directory.", this->getCmd() };
     }
     if (!utils::isSubDirectory(root, output))
     {
-        throw LibraryConfigError{ "StepExtractImpl: output path is outside of the working directory." };
+        throw LibraryConfigError{ "{}: output path is outside of the working directory.", this->getCmd() };
     }
 
     if (!std::filesystem::exists(input))
     {
-        throw AppError{ "StepExtractImpl: input file does not exist: {}", input.u8string() };
+        throw AppError{ "{}: input file does not exist: {}", this->getCmd(), input.u8string() };
     }
 
     if (root != output)
@@ -94,8 +99,12 @@ roah::distb::config::impl::StepExtractImpl::operator()(const WorkingContext & co
 
     if (!this->error_ok_)
     {
-        AppError::check(result.exit_code == 0, "StepExtractImpl: tar exited with code {}.", result.exit_code);
+        AppError::check(result.exit_code == 0, "{}: tar exited with code {}.", this->getCmd(), result.exit_code);
     }
+
+    context.registRuntimeVariable("input", utils::toString(input.u8string()));
+    context.registRuntimeVariable("output", utils::toString(output.u8string()));
+    context.registRuntimeVariable("exit_code", static_cast<std::int64_t>(result.exit_code));
 
     logger.log("Extract Done.");
 }

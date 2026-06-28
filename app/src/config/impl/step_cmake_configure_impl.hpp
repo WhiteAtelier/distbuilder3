@@ -27,14 +27,11 @@ public:
 
     StepCMakeConfigureImpl(const StepCMakeConfigureImpl &);
     StepCMakeConfigureImpl(StepCMakeConfigureImpl &&) noexcept;
-    StepCMakeConfigureImpl &
-    operator=(const StepCMakeConfigureImpl &);
-    StepCMakeConfigureImpl &
-    operator=(StepCMakeConfigureImpl &&) noexcept;
+
     ~StepCMakeConfigureImpl() noexcept override;
 
     void
-    operator()(const WorkingContext & context) const override;
+    operator()(WorkingContext & context) const override;
 
     std::unique_ptr<StepDef>
     clone() const override;

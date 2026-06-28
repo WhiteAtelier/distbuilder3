@@ -21,18 +21,10 @@ roah::distb::config::impl::StepCMakeInstallAllImpl::StepCMakeInstallAllImpl(cons
 roah::distb::config::impl::StepCMakeInstallAllImpl::StepCMakeInstallAllImpl(StepCMakeInstallAllImpl &&) noexcept
     = default;
 
-roah::distb::config::impl::StepCMakeInstallAllImpl &
-roah::distb::config::impl::StepCMakeInstallAllImpl::operator=(const StepCMakeInstallAllImpl &)
-    = default;
-
-roah::distb::config::impl::StepCMakeInstallAllImpl &
-roah::distb::config::impl::StepCMakeInstallAllImpl::operator=(StepCMakeInstallAllImpl &&) noexcept
-    = default;
-
 roah::distb::config::impl::StepCMakeInstallAllImpl::~StepCMakeInstallAllImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepCMakeInstallAllImpl::operator()(const WorkingContext & context) const
+roah::distb::config::impl::StepCMakeInstallAllImpl::operator()(WorkingContext & context) const
 {
     AppError::check(!this->build_dir_.empty(), "Build directory is empty.");
 

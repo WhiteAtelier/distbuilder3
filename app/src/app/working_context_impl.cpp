@@ -19,7 +19,7 @@ roah::distb::app::WorkingContextImpl::WorkingContextImpl(
 roah::distb::app::WorkingContextImpl::~WorkingContextImpl() noexcept = default;
 
 const std::filesystem::path &
-roah::distb::app::WorkingContextImpl::getbuild_root_directory() const
+roah::distb::app::WorkingContextImpl::getBuildRootDirectory() const
 {
     return this->app_config_.getBuildDirectory();
 }
@@ -54,4 +54,19 @@ bool
 roah::distb::app::WorkingContextImpl::evalCondition(const config::Condition & condition) const
 {
     return condition.eval(this->variables_);
+}
+
+void
+roah::distb::app::WorkingContextImpl::registRuntimeVariable(std::string        key,
+                                                            utils::OptionValue value,
+                                                            const bool         in_step_ns)
+{
+    if (in_step_ns)
+    {
+        this->variables_[this->resolveString("step.${current_step_name}." + key)] = std::move(value);
+    }
+    else
+    {
+        this->variables_[std::move(key)] = std::move(value);
+    }
 }

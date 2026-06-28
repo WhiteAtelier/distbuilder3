@@ -580,6 +580,7 @@ roah::distb::app::App::Impl_::_buildDeps()
                     std::filesystem::remove_all(this->app_config_.getInstallDirectory() / name / dep.getStateHash());
                     throw;
                 }
+
                 builts.emplace(name);
             }
             else

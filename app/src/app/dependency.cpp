@@ -267,6 +267,9 @@ roah::distb::app::Dependency::generateVariables(const AppConfig & app_config) co
 {
     roah::distb::config::Variables variables;
     variables["version"]      = this->version_;
+    variables["author"]       = this->getAuthor();
+    variables["repo"]         = this->getRepo();
+    variables["repository"]   = this->getRepo();
     variables["generator"]    = utils::toString(app_config.getGenerator());
     variables["arch"]         = utils::toString(app_config.getArchitecture());
     variables["architecture"] = utils::toString(app_config.getArchitecture());

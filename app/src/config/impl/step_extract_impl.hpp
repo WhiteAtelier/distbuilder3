@@ -18,17 +18,19 @@ public:
     constexpr static std::string_view kCmd = "extract";
 
     StepExtractImpl();
+    StepExtractImpl(const std::string_view cmd_name_driven_by,
+                    std::string            input,
+                    std::string            output,
+                    const bool             verbosity,
+                    const bool             error_ok);
 
     StepExtractImpl(const StepExtractImpl &);
     StepExtractImpl(StepExtractImpl &&) noexcept;
-    StepExtractImpl &
-    operator=(const StepExtractImpl &);
-    StepExtractImpl &
-    operator=(StepExtractImpl &&) noexcept;
+
     ~StepExtractImpl() noexcept override;
 
     void
-    operator()(const WorkingContext & context) const override;
+    operator()(WorkingContext & context) const override;
 
     std::unique_ptr<StepDef>
     clone() const override;

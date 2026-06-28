@@ -20,18 +20,10 @@ roah::distb::config::impl::StepInstallFileImpl::StepInstallFileImpl(const StepIn
 
 roah::distb::config::impl::StepInstallFileImpl::StepInstallFileImpl(StepInstallFileImpl &&) noexcept = default;
 
-roah::distb::config::impl::StepInstallFileImpl &
-roah::distb::config::impl::StepInstallFileImpl::operator=(const StepInstallFileImpl &)
-    = default;
-
-roah::distb::config::impl::StepInstallFileImpl &
-roah::distb::config::impl::StepInstallFileImpl::operator=(StepInstallFileImpl &&) noexcept
-    = default;
-
 roah::distb::config::impl::StepInstallFileImpl::~StepInstallFileImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepInstallFileImpl::operator()(const WorkingContext & context) const
+roah::distb::config::impl::StepInstallFileImpl::operator()(WorkingContext & context) const
 {
     AppError::check(!this->source_file_.empty(), "Source file is empty.");
     AppError::check(!this->destination_dir_.empty(), "Destination directory is empty.");
@@ -65,6 +57,11 @@ roah::distb::config::impl::StepInstallFileImpl::operator()(const WorkingContext 
         }
 
         logger.log("Installing file: {} -> {}", src_path.u8string(), dest_dir.u8string());
+
+        AppError::check(std::filesystem::exists(src_path),  //
+                        "Source file does not exist: {}",
+                        src_path.u8string());
+
         std::filesystem::copy(src_path,
                               dest_dir / src_path.filename(),
                               std::filesystem::copy_options::overwrite_existing);

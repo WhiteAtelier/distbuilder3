@@ -120,7 +120,10 @@ roah::distb::config::DependencySpec::getName() const noexcept
 const std::vector<std::string> &
 roah::distb::config::DependencySpec::getRequiredVersionRange() const noexcept
 {
-    return this->required_version_range_;
+    static const std::vector<std::string> fallback_range{ "..." };
+    return !this->required_version_range_.empty()  //
+             ? this->required_version_range_
+             : fallback_range;
 }
 
 const std::unordered_map<std::string, roah::distb::utils::OptionValue> &

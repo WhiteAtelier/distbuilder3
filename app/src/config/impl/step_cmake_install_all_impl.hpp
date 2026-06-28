@@ -21,14 +21,11 @@ public:
 
     StepCMakeInstallAllImpl(const StepCMakeInstallAllImpl &);
     StepCMakeInstallAllImpl(StepCMakeInstallAllImpl &&) noexcept;
-    StepCMakeInstallAllImpl &
-    operator=(const StepCMakeInstallAllImpl &);
-    StepCMakeInstallAllImpl &
-    operator=(StepCMakeInstallAllImpl &&) noexcept;
+
     ~StepCMakeInstallAllImpl() noexcept override;
 
     void
-    operator()(const WorkingContext & context) const override;
+    operator()(WorkingContext & context) const override;
 
     std::unique_ptr<StepDef>
     clone() const override;

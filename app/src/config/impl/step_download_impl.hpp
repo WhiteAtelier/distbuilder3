@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace roah::distb::config::impl {
 
@@ -19,19 +20,19 @@ public:
     constexpr static std::string_view kCmd = "download";
 
     StepDownloadImpl();
+    StepDownloadImpl(const std::string_view     cmd_name_driven_by,
+                     std::string                url,
+                     std::string                output,
+                     std::string                hash,
+                     std::vector<std::u8string> curl_extra_args = {});
 
-    StepDownloadImpl(const StepDownloadImpl &)     = default;
-    StepDownloadImpl(StepDownloadImpl &&) noexcept = default;
-    StepDownloadImpl &
-    operator=(const StepDownloadImpl &)
-        = default;
-    StepDownloadImpl &
-    operator=(StepDownloadImpl &&) noexcept
-        = default;
+    StepDownloadImpl(const StepDownloadImpl &);
+    StepDownloadImpl(StepDownloadImpl &&) noexcept;
+
     ~StepDownloadImpl() noexcept override;
 
     void
-    operator()(const WorkingContext & context) const override;
+    operator()(WorkingContext & context) const override;
 
     std::unique_ptr<StepDef>
     clone() const override;
@@ -52,9 +53,11 @@ private:
     std::string
     _calculateHash(const std::filesystem::path & path) const;
 
-    std::string url_;
-    std::string output_;
-    std::string hash_;
+    std::string                url_;
+    std::string                output_;
+    std::string                hash_;
+    //
+    std::vector<std::u8string> curl_extra_args_;
 };
 
 }  // namespace roah::distb::config::impl

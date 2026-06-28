@@ -6,6 +6,9 @@
 
 namespace roah::distb {
 
+namespace utils {
+class OptionValue;
+}  // namespace utils
 namespace config {
 class Condition;
 }  // namespace config
@@ -20,7 +23,7 @@ public:
 
     [[nodiscard]]
     virtual const std::filesystem::path &
-    getbuild_root_directory() const
+    getBuildRootDirectory() const
         = 0;
 
     // 変数には絶対にしないこと.
@@ -48,6 +51,10 @@ public:
     [[nodiscard]]
     virtual bool
     evalCondition(const config::Condition & condition) const
+        = 0;
+
+    virtual void
+    registRuntimeVariable(std::string key, utils::OptionValue value, const bool in_step_ns = true)
         = 0;
 };
 

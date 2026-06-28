@@ -15,24 +15,18 @@
 
 roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl()
     : StepDef{ kCmd }
+    , source_dir_{ "src" }
+    , build_dir_{ "build" }
 {}
 
 roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl(const StepCMakeConfigureImpl &) = default;
 
 roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl(StepCMakeConfigureImpl &&) noexcept = default;
 
-roah::distb::config::impl::StepCMakeConfigureImpl &
-roah::distb::config::impl::StepCMakeConfigureImpl::operator=(const StepCMakeConfigureImpl &)
-    = default;
-
-roah::distb::config::impl::StepCMakeConfigureImpl &
-roah::distb::config::impl::StepCMakeConfigureImpl::operator=(StepCMakeConfigureImpl &&) noexcept
-    = default;
-
 roah::distb::config::impl::StepCMakeConfigureImpl::~StepCMakeConfigureImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepCMakeConfigureImpl::operator()(const WorkingContext & context) const
+roah::distb::config::impl::StepCMakeConfigureImpl::operator()(WorkingContext & context) const
 {
     AppError::check(!this->source_dir_.empty(), "Source directory is empty.");
     AppError::check(!this->build_dir_.empty(), "Build directory is empty.");

@@ -61,7 +61,7 @@ public:
     getLicenseFilePath() const noexcept;
 
     void
-    build(const WorkingContext & working_ctx) const;
+    build(WorkingContext & working_ctx) const;
 
 private:
     using StepDefHolder = utils::DelayCopyableContainer<StepDef>;

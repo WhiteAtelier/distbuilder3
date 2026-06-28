@@ -26,9 +26,11 @@ public:
     StepDef(const StepDef &);
     StepDef(StepDef &&) noexcept;
     StepDef &
-    operator=(const StepDef &);
+    operator=(const StepDef &)
+        = delete;
     StepDef &
-    operator=(StepDef &&) noexcept;
+    operator=(StepDef &&)
+        = delete;
     virtual ~StepDef() noexcept;
 
     virtual void
@@ -36,7 +38,7 @@ public:
         = 0;
 
     virtual void
-    operator()(const WorkingContext & context) const
+    operator()(WorkingContext & context) const
         = 0;
 
     virtual std::unique_ptr<StepDef>

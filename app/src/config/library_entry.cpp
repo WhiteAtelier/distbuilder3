@@ -2,6 +2,7 @@
 
 #include "roah/distb/config/step_def.hpp"
 #include "roah/distb/errors.hpp"
+#include "roah/distb/working_context.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -214,11 +215,18 @@ roah::distb::config::LibraryEntry::getLicenseFilePath() const noexcept
 }
 
 void
-roah::distb::config::LibraryEntry::build(const WorkingContext & working_ctx) const
+roah::distb::config::LibraryEntry::build(WorkingContext & working_ctx) const
 {
     for (const auto & step_name : this->order_)
     {
-        const auto & step = this->steps_.at(step_name);
-        step.ref()(working_ctx);
+        const auto i_step = this->steps_.find(step_name);
+        if (i_step == this->steps_.end())
+        {
+            throw LibraryConfigError{ "Step '{}' is not defined in the library entry.", step_name };
+        }
+        const auto & step = i_step->second;
+        working_ctx.registRuntimeVariable("current_step_name", step_name, false);
+        working_ctx.registRuntimeVariable("current_step_cmd", std::string{ step->getCmd() }, false);
+        (*step)(working_ctx);
     }
 }

@@ -23,7 +23,7 @@ public:
     ~WorkingContextImpl() noexcept override;
 
     const std::filesystem::path &
-    getbuild_root_directory() const override;
+    getBuildRootDirectory() const override;
 
     const std::string &
     getGitHubPublicAccessToken() const override;
@@ -40,10 +40,13 @@ public:
     bool
     evalCondition(const config::Condition & condition) const override;
 
+    void
+    registRuntimeVariable(std::string key, utils::OptionValue value, const bool in_step_ns) override;
+
 private:
     const AppConfig &                                    app_config_;
     const std::filesystem::path                          current_working_directory_;
-    const config::Variables &                            variables_;
+    config::Variables                                    variables_;
     const std::unordered_map<std::string, std::string> & dependencies_;
 };
 
