@@ -50,6 +50,9 @@ private:
     _setupCli(CLI::App & cli_app);
 
     void
+    _checkCMake();
+
+    void
     _initialize();
 
     void
@@ -75,6 +78,7 @@ private:
     bool                                           a_verbose_;
     bool                                           a_force_build_;
     bool                                           a_no_build_;
+    bool                                           a_check_conf_;
     std::string                                    a_config_file_;
     std::string                                    a_source_dir_;
     std::string                                    a_cmake_preset_file_;
@@ -110,6 +114,7 @@ roah::distb::app::App::Impl_::Impl_(std::filesystem::path executable_dir)
     : a_verbose_{ false }
     , a_force_build_{ false }
     , a_no_build_{ false }
+    , a_check_conf_{ false }
     , a_source_dir_{ "." }
     , a_cmake_preset_file_{ "./CMakeUserPresets.json" }
     , app_config_{ std::move(executable_dir) }
@@ -167,7 +172,8 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
     CLI11_PARSE(cli_app, argc, argv);
 
     // Set verbose logging
-    logger.setVerbose(this->a_verbose_);
+    // -- check-conf の場合も verbose にする
+    logger.setVerbose(this->a_verbose_ || this->a_check_conf_);
 
     // Load AppConfig
     if (!this->a_config_file_.empty())
@@ -177,6 +183,13 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
 
     // Load configuration
     this->app_config_.load();
+
+    this->_checkCMake();
+
+    if (this->a_check_conf_)
+    {
+        return 0;
+    }
 
     // Validate/Initialize configuration
     this->_initialize();
@@ -232,20 +245,21 @@ roah::distb::app::App::run(int argc, const char * const argv[])
         logger.log("Error: {}", e.what());
     }
 #ifndef _DEBUG
+    catch (const std::filesystem::filesystem_error & e)
+    {
+        logger.log("Filesystem Error: {}", e.what());
+    }
     catch (const std::runtime_error & e)
     {
         logger.log("Runtime Error: {}", e.what());
-        return 2;
     }
     catch (const std::exception & e)
     {
         logger.log("Exception: {}", e.what());
-        return 2;
     }
     catch (...)
     {
         logger.log("Unknown error occurred.");
-        return 3;
     }
 #endif
     return 1;
@@ -257,17 +271,18 @@ roah::distb::app::App::run(int argc, const char * const argv[])
 void
 roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
 {
-    cli_app.set_version_flag(
-        "--version",
-        std::format("{}.{}.{}", DISTBUILDER3_VERSION_MAJOR, DISTBUILDER3_VERSION_MINOR, DISTBUILDER3_VERSION_PATCH));
+    cli_app.set_version_flag("--version",
+                             std::format("distbuilder {}.{}.{}",
+                                         DISTBUILDER3_VERSION_MAJOR,
+                                         DISTBUILDER3_VERSION_MINOR,
+                                         DISTBUILDER3_VERSION_PATCH));
 
-    cli_app
-        .add_option(  //
-            "-c,--config",
-            this->a_config_file_,
-            "Path to the configuration file."
+    cli_app.add_option(  //
+        "-c,--config",
+        this->a_config_file_,
+        "Path to the configuration file."
 #ifdef ROAH_ARCH_WIN32
-            " (default: %USERPROFILE%\\distbuilder.conf)"
+        " (default: %USERPROFILE%\\distbuilder.conf)"
 #elif defined(ROAH_ARCH_MACOS)
 #    error "unsupported platform"
 #elif defined(ROAH_ARCH_LINUX)
@@ -275,45 +290,92 @@ roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
 #else
 #    error "unsupported platform"
 #endif
-            )
-        ->check(CLI::ExistingFile);
+    );
 
-    cli_app  //
-        .add_flag("-v,--verbose", this->a_verbose_, "Enable verbose logging.")
+    auto * root_grp = cli_app.add_option_group("distbuilder");
+
+    auto * cconf_grp = root_grp->add_option_group("Check config mode", "Options for checking the user conf file.");
+    cconf_grp->footer("----------------------------------------------");
+    cconf_grp->add_flag("--check-conf", this->a_check_conf_, "Check configuration file.");
+
+    auto * build_grp = root_grp->add_option_group("Build mode", "Main distbuilder options");
+    build_grp->footer("----------------------------------------------");
+
+    build_grp  //
+        ->add_flag("-v,--verbose", this->a_verbose_, "Enable verbose logging.")
         ->default_val(this->a_verbose_)
         ->capture_default_str();
 
-    cli_app  //
-        .add_flag("-f,--force", this->a_force_build_, "Force (re)build.")
+    build_grp  //
+        ->add_flag("-f,--force", this->a_force_build_, "Force (re)build.")
         ->default_val(this->a_force_build_)
         ->capture_default_str();
 
-    cli_app  //
-        .add_flag("--no-build", this->a_no_build_, "Skip build step.")
+    build_grp  //
+        ->add_flag("--no-build", this->a_no_build_, "Skip build step.")
         ->default_val(this->a_no_build_)
         ->capture_default_str();
 
-    cli_app  //
-        .add_option("--export-presets", this->a_cmake_preset_names_, "CMake preset configure name(s) to setup.")
+    build_grp  //
+        ->add_option("--export-presets", this->a_cmake_preset_names_, "CMake preset configure name(s) to setup.")
         ->expected(0, 256)
         ->default_str("$");
 
-    cli_app  //
-        .add_option("--preset-file", this->a_cmake_preset_file_, "CMake preset file to use.")
+    build_grp  //
+        ->add_option("--preset-file", this->a_cmake_preset_file_, "CMake preset file to use.")
         ->default_val(this->a_cmake_preset_file_)
         ->capture_default_str();
 
-    cli_app  //
-        .add_option("--gather-licenses", this->a_licenses_dir_, "Directory to export licenses.")
+    build_grp  //
+        ->add_option("--gather-licenses", this->a_licenses_dir_, "Directory to export licenses.")
         ->default_val(this->a_licenses_dir_);
 
-    cli_app
-        .add_option(  //
-            "sourceDir",
-            this->a_source_dir_,
-            "Path to the source directory.")
+    build_grp  //
+        ->add_option("sourceDir", this->a_source_dir_, "Path to the source directory.")
         ->check(CLI::ExistingDirectory)
         ->required(true);
+
+    root_grp->require_option(1);
+}
+
+// ============================================================================================= //
+// [PRIVATE] _checkCMake()
+// ============================================================================================= //
+void
+roah::distb::app::App::Impl_::_checkCMake()
+{
+    // cmake check
+    AppError::check(!this->app_config_.getCMakeExecutable().empty(), "CMake executable is empty.");
+    const auto cmake_ret = utils::run({ this->app_config_.getCMakeExecutable(), u8"--version" },
+                                      {
+                                          .print_stdout   = false,
+                                          .print_stderr   = false,
+                                          .capture_stderr = false,
+                                      });
+
+    std::regex  version_regex{ R"(cmake version (\d+)\.(\d+).(\d+))" };
+    std::smatch version_match;
+    const auto  result = std::regex_search(cmake_ret.stdout_output, version_match, version_regex);
+    AppError::check(result, "CMake \'{}\' is not executable.", this->app_config_.getCMakeExecutable());
+
+    this->cmake_version_.major = std::stoul(version_match[1].str());
+    this->cmake_version_.minor = std::stoul(version_match[2].str());
+    this->cmake_version_.patch = std::stoul(version_match[3].str());
+
+    if (!(this->cmake_version_.major >= 3 && this->cmake_version_.minor >= 19))
+    {
+        // 最低バージョンは 3.19.0
+        // CMakePresets の最低サポート
+        throw AppError{ "CMake version {}.{}.{} is not supported. Minimum required version is 3.19.0.",
+                        this->cmake_version_.major,
+                        this->cmake_version_.minor,
+                        this->cmake_version_.patch };
+    }
+
+    logger.log("CMake \'{}.{}.{}\' is available.",
+               this->cmake_version_.major,
+               this->cmake_version_.minor,
+               this->cmake_version_.patch);
 }
 
 // ============================================================================================= //
@@ -342,42 +404,6 @@ roah::distb::app::App::Impl_::_initialize()
     {
         // CMakePreset 出力する
         this->cmake_preset_file_path_ = utils::makeAbsolutePath(this->a_cmake_preset_file_);
-    }
-
-    {
-        // cmake check
-        AppError::check(!this->app_config_.getCMakeExecutable().empty(), "CMake executable is empty.");
-        const auto cmake_ret = utils::run({ this->app_config_.getCMakeExecutable(), u8"--version" },
-                                          {
-                                              .print_stdout   = false,
-                                              .print_stderr   = false,
-                                              .capture_stderr = false,
-                                          });
-
-        // cmake version 3.31.4
-        std::regex  version_regex{ R"(cmake version (\d+)\.(\d+).(\d+))" };
-        std::smatch version_match;
-        const auto  result = std::regex_search(cmake_ret.stdout_output, version_match, version_regex);
-        AppError::check(result, "CMake \'{}\' is not executable.", this->app_config_.getCMakeExecutable());
-
-        this->cmake_version_.major = std::stoul(version_match[1].str());
-        this->cmake_version_.minor = std::stoul(version_match[2].str());
-        this->cmake_version_.patch = std::stoul(version_match[3].str());
-
-        if (!(this->cmake_version_.major >= 3 && this->cmake_version_.minor >= 19))
-        {
-            // 最低バージョンは 3.19.0
-            // CMakePresets の最低サポート
-            throw AppError{ "CMake version {}.{}.{} is not supported. Minimum required version is 3.19.0.",
-                            this->cmake_version_.major,
-                            this->cmake_version_.minor,
-                            this->cmake_version_.patch };
-        }
-
-        logger.log("CMake \'{}.{}.{}\' is available.",
-                   this->cmake_version_.major,
-                   this->cmake_version_.minor,
-                   this->cmake_version_.patch);
     }
 
     // source directory check
