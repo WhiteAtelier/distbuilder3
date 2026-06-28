@@ -43,6 +43,7 @@ roah_add_library(distb-utils
         utils/hash.cpp
         utils/option_value.cpp
         utils/string_expander.cpp
+        utils/string.cpp
         utils/utils_main.cpp
 
     MSVC_HEADERS_FILTER_ROOT
