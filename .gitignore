@@ -6,4 +6,4 @@ out/
 *.sh
 CMakeUserPresets.json
 deps.full.toml
-test_project/licenses
+test_project/

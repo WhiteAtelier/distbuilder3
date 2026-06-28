@@ -1,7 +1,0 @@
-
-cxx_standard = "20"
-
-[WhiteAtelier.roah-lib]
-
-[machinezone.IXWebSocket]
-version = "11.4.6"
