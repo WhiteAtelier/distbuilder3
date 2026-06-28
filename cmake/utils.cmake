@@ -160,7 +160,6 @@ function(roah_add_library ARG_TARGET_NAME)
                 FILES
                     ${ARG_ABS_HEADERS}
         )
-        regist_doxygen_files("${ARG_ABS_HEADERS}")
     endif()
 
     # --- MSVC Filters

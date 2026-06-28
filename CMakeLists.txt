@@ -13,10 +13,8 @@ project(distbuilder
         CXX
 )
 
-option(DISTBUILDER3_BUILD_DOCS "Generate documents." OFF)
 option(DISTBUILDER3_BUILD_TESTS "Build test project." OFF)
 
-include(cmake/doxygen/doxygen.cmake)
 include(cmake/utils.cmake)
 
 set(CMAKE_DEBUG_POSTFIX "d" CACHE STRING "Debug postfix")
@@ -49,5 +47,3 @@ if (DISTBUILDER3_BUILD_TESTS)
 endif()
 
 add_subdirectory(app)
-
-add_doxygen_target()
