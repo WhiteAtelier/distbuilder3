@@ -4,15 +4,16 @@
 #include <string>
 
 std::string
-roah::distb::utils::encodeBase32(const std::byte * const data,
-                                 const std::size_t       size,
-                                 const bool              small_char,
-                                 const bool              with_padding)
+roah::distb::utils::encodeBase32(const void * const _data,
+                                 const std::size_t  size,
+                                 const bool         small_char,
+                                 const bool         with_padding)
 {
     std::string ret;
     ret.reserve((size + 4ull) / 5ull * 8ull);  // 5byte -> 8char
 
-    const auto get_fn = [&](const std::size_t i) { return (i < size) ? data[i] : std::byte{ 0 }; };
+    const auto * const data   = reinterpret_cast<const std::byte *>(_data);
+    const auto         get_fn = [&](const std::size_t i) { return (i < size) ? data[i] : std::byte{ 0 }; };
 
     constexpr std::string_view value_char_map_sm{ "abcdefghijklmnopqrstuvwxyz234567" };
     constexpr std::string_view value_char_map_lg{ "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567" };

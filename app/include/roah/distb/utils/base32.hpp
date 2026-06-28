@@ -7,10 +7,10 @@
 namespace roah::distb::utils {
 
 std::string
-encodeBase32(const std::byte * const data,
-             const std::size_t       size,
-             const bool              small_char   = false,
-             const bool              with_padding = false);
+encodeBase32(const void * const data,
+             const std::size_t  size,
+             const bool         small_char   = false,
+             const bool         with_padding = false);
 
 }  // namespace roah::distb::utils
 
