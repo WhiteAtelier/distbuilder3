@@ -378,7 +378,7 @@ roah::distb::app::Dependency::build(const AppConfig &                           
             }
 
             throw DependencyResolveError{
-                "Library {}.{}, Version '{}' is required Library {}.{} in version range [{}], "
+                "Library '{}.{}' (Version {}) is required Library {}.{} in version range [{}], "
                 "but version '{}' is selected.",
                 this->getAuthor(),
                 this->getRepo(),
@@ -388,6 +388,34 @@ roah::distb::app::Dependency::build(const AppConfig &                           
                 version_range_str,
                 dep.getVersion()
             };
+        }
+
+        // override option のチェックを行う
+        const auto & dep_options = dep.getOptions();
+        const auto & req_options = req_dep.getOptions();
+        for (const auto & [key, req_value] : req_options)
+        {
+            const auto iter = dep_options.find(key);
+            if (iter != dep_options.end())
+            {
+                const auto & dep_value = iter->second;
+                if (dep_value != req_value)
+                {
+                    throw DependencyResolveError{
+                        "Library '{}.{}' (Version {}) is required Library '{}.{}' with option '{}={}', "
+                        "but actually '{}={}' is set.",
+                        this->getAuthor(),
+                        this->getRepo(),
+                        this->getVersion(),
+                        dep.getAuthor(),
+                        dep.getRepo(),
+                        key,
+                        static_cast<std::string>(req_value),
+                        key,
+                        static_cast<std::string>(dep_value)
+                    };
+                }
+            }
         }
 
         dependencies[name] = dep.getStateHash();
