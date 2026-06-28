@@ -295,11 +295,11 @@ roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
     auto * root_grp = cli_app.add_option_group("distbuilder");
 
     auto * cconf_grp = root_grp->add_option_group("Check config mode", "Options for checking the user conf file.");
-    cconf_grp->footer("----------------------------------------------");
+    cconf_grp->footer(" ");  // Empty Line
     cconf_grp->add_flag("--check-conf", this->a_check_conf_, "Check configuration file.");
 
     auto * build_grp = root_grp->add_option_group("Build mode", "Main distbuilder options");
-    build_grp->footer("----------------------------------------------");
+    build_grp->footer(" ");  // Empty Line
 
     build_grp  //
         ->add_flag("-v,--verbose", this->a_verbose_, "Enable verbose logging.")
