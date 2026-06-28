@@ -11,13 +11,22 @@
 
 namespace roah::distb::app {
 
+class AppConfig;
+
 class WorkingContextImpl final : public WorkingContext
 {
 public:
-    WorkingContextImpl(std::filesystem::path                                current_working_path,
+    WorkingContextImpl(const AppConfig &                                    app_config,
+                       std::filesystem::path                                current_working_directory,
                        const config::Variables &                            variables,
                        const std::unordered_map<std::string, std::string> & dependencies);
     ~WorkingContextImpl() noexcept override;
+
+    const std::filesystem::path &
+    getbuild_root_directory() const override;
+
+    const std::string &
+    getGitHubPublicAccessToken() const override;
 
     const std::filesystem::path &
     getCurrentWorkingDirectory() const override;
@@ -32,7 +41,8 @@ public:
     evalCondition(const config::Condition & condition) const override;
 
 private:
-    std::filesystem::path                                current_working_path_;
+    const AppConfig &                                    app_config_;
+    const std::filesystem::path                          current_working_directory_;
     const config::Variables &                            variables_;
     const std::unordered_map<std::string, std::string> & dependencies_;
 };

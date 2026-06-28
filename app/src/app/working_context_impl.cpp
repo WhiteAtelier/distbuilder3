@@ -1,13 +1,17 @@
 #include "working_context_impl.hpp"
 
+#include "app_config.hpp"
+//
 #include "roah/distb/config/condition.hpp"
 #include "roah/distb/utils/string_expander.hpp"
 
 roah::distb::app::WorkingContextImpl::WorkingContextImpl(
-    std::filesystem::path                                current_working_path,
+    const AppConfig &                                    app_config,
+    std::filesystem::path                                current_working_directory,
     const config::Variables &                            variables,
     const std::unordered_map<std::string, std::string> & dependencies)
-    : current_working_path_{ std::move(current_working_path) }
+    : app_config_{ app_config }
+    , current_working_directory_{ std::move(current_working_directory) }
     , variables_{ variables }
     , dependencies_{ dependencies }
 {}
@@ -15,9 +19,21 @@ roah::distb::app::WorkingContextImpl::WorkingContextImpl(
 roah::distb::app::WorkingContextImpl::~WorkingContextImpl() noexcept = default;
 
 const std::filesystem::path &
+roah::distb::app::WorkingContextImpl::getbuild_root_directory() const
+{
+    return this->app_config_.getBuildDirectory();
+}
+
+const std::string &
+roah::distb::app::WorkingContextImpl::getGitHubPublicAccessToken() const
+{
+    return this->app_config_.getGitHubPublicAccessToken();
+}
+
+const std::filesystem::path &
 roah::distb::app::WorkingContextImpl::getCurrentWorkingDirectory() const
 {
-    return this->current_working_path_;
+    return this->current_working_directory_;
 }
 
 std::string

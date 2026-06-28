@@ -455,6 +455,15 @@ roah::distb::app::App::Impl_::_parseDeps()
 
                     for (const auto & [key, t_value] : t_options.as_table())
                     {
+                        if (key.starts_with("_"))
+                        {
+                            // hidden option, 指定もできない.
+                            throw AppError{ "{}: hidden option '{}' cannot be specified for {}.{}",
+                                            this->deps_file_path_.filename().u8string(),
+                                            key,
+                                            author,
+                                            repo };
+                        }
                         if (t_value.is_string())
                         {
                             dep.setOption<std::string>(key, t_value.as_string());
@@ -610,6 +619,11 @@ roah::distb::app::App::Impl_::_updateDepsToml() const
 
         for (const auto & [key, value] : dep.getOptions())
         {
+            if (key.starts_with("_"))
+            {
+                // hidden option, skip export
+                continue;
+            }
             if (value.hasBool())
             {
                 t_opt[key] = static_cast<bool>(value);

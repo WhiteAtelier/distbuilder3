@@ -20,6 +20,17 @@ public:
 
     [[nodiscard]]
     virtual const std::filesystem::path &
+    getbuild_root_directory() const
+        = 0;
+
+    // 変数には絶対にしないこと.
+    [[nodiscard]]
+    virtual const std::string &
+    getGitHubPublicAccessToken() const
+        = 0;
+
+    [[nodiscard]]
+    virtual const std::filesystem::path &
     getCurrentWorkingDirectory() const
         = 0;
 

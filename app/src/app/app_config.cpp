@@ -132,6 +132,15 @@ roah::distb::app::AppConfig::load()
                     = utils::toU8String(t_cmake_presets.at("default_install_dir").as_string());
             }
         }
+
+        if (root.contains("github"))
+        {
+            const auto & t_github = root.at("github");
+            if (t_github.contains("public_access_token"))
+            {
+                this->github_public_access_token_ = t_github.at("public_access_token").as_string();
+            }
+        }
     }
     catch (const toml::exception & e)
     {
@@ -156,6 +165,8 @@ roah::distb::app::AppConfig::load()
 
     logger.trace("[ CMake Presets ] Default Build Directory   = {}", this->cmake_presets_default_build_dir_);
     logger.trace("[ CMake Presets ] Default Install Directory = {}", this->cmake_presets_default_install_dir_);
+    logger.trace("[    GitHub     ] Public Access Token       = {}",
+                 this->github_public_access_token_.empty() ? "(empty)" : "******** (set)");
 }
 
 void
@@ -218,6 +229,21 @@ roah::distb::app::AppConfig::_createTemplate()
                             " -- default: ${sourceDir}/install",
                             " When distbuilder creates new cmake configure preset, this settings is used as \"installDir\" value.",
                             " \"installDir\" key is only defined if this value is non-empty." }) },
+                },
+            },
+            {
+                "github",
+                toml::table{
+                    { "public_access_token",
+                      create_item(
+                          "",
+                          { " (Optional) GitHub public access token.",  //
+                            " -- This token is used to access GitHub API for public or users private repositories.",
+                            " -- If this token is not set, GitHub API access is limited to 60 requests per hour.",
+                            " -- If this token is set, GitHub API access is limited to 5000 requests per hour.",
+                            " -- Get token: https://github.com/settings/personal-access-tokens",
+                            " -- Required permissions: Contents: Read-only, Metadata: Read-only",
+                            " -- default: (empty)" }) },
                 },
             },
         },
@@ -286,4 +312,10 @@ const std::u8string &
 roah::distb::app::AppConfig::getCMakePresetsDefaultInstallDir() const noexcept
 {
     return this->cmake_presets_default_install_dir_;
+}
+
+const std::string &
+roah::distb::app::AppConfig::getGitHubPublicAccessToken() const noexcept
+{
+    return this->github_public_access_token_;
 }

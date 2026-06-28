@@ -64,20 +64,28 @@ roah::distb::app::LibraryStore::fetch()
         logger.log("Fetching library store from GitHub...");
         std::string new_commit_hash;
         {
-            const auto f_commit = utils::run(
-                {
-                    u8"curl",
-                    u8"https://api.github.com/repos/WhiteAtelier/distbuilder3-libraries/branches/main",
-                    u8"-H",
-                    u8"Accept: application/vnd.github+json"  //
-                    u8"--silent",
-                },
-                {
-                    .print_stdout   = false,
-                    .print_stderr   = logger.isVerbose(),
-                    .capture_stdout = true,
-                    .capture_stderr = false,
-                });
+            std::vector<std::u8string> get_commits_cmd{
+                u8"curl",
+                u8"https://api.github.com/repos/WhiteAtelier/distbuilder3-libraries/branches/main",
+                u8"-H",
+                u8"Accept: application/vnd.github+json"  //
+                u8"--silent",
+            };
+
+            if (!this->app_config_.getGitHubPublicAccessToken().empty())
+            {
+                get_commits_cmd.emplace_back(u8"-H");
+                get_commits_cmd.emplace_back(u8"Authorization: Bearer "
+                                             + utils::toU8String(this->app_config_.getGitHubPublicAccessToken()));
+            }
+
+            const auto f_commit = utils::run(get_commits_cmd,
+                                             {
+                                                 .print_stdout   = false,
+                                                 .print_stderr   = logger.isVerbose(),
+                                                 .capture_stdout = true,
+                                                 .capture_stderr = false,
+                                             });
 
             if (f_commit.exit_code == 0)
             {
@@ -117,8 +125,8 @@ roah::distb::app::LibraryStore::fetch()
             }
             std::filesystem::create_directories(working_dir);
 
-            const auto f_download = utils::run(
-                {
+            {
+                std::vector<std::u8string> download_cmd = {
                     u8"curl",
                     u8"https://github.com/WhiteAtelier/distbuilder3-libraries/archive/"  //
                         + utils::toU8String(new_commit_hash) + u8".zip",
@@ -126,21 +134,31 @@ roah::distb::app::LibraryStore::fetch()
                     u8"--location",
                     u8"--output",
                     src_file_path.u8string(),
-                },
-                {
-                    .print_stdout   = false,
-                    .print_stderr   = logger.isVerbose(),
-                    .capture_stdout = false,
-                    .capture_stderr = true,
-                });
+                };
 
-            if (f_download.exit_code != 0)
-            {
-                logger.log("LibraryStore: Failed to download library store. Exit code: {}, {}",
-                           f_download.exit_code,
-                           f_download.stderr_output);
-                logger.log("Skipping update.");
-                return;
+                if (!this->app_config_.getGitHubPublicAccessToken().empty())
+                {
+                    download_cmd.emplace_back(u8"-H");
+                    download_cmd.emplace_back(u8"Authorization: Bearer "
+                                              + utils::toU8String(this->app_config_.getGitHubPublicAccessToken()));
+                }
+
+                const auto f_download = utils::run(download_cmd,
+                                                   {
+                                                       .print_stdout   = false,
+                                                       .print_stderr   = logger.isVerbose(),
+                                                       .capture_stdout = false,
+                                                       .capture_stderr = true,
+                                                   });
+
+                if (f_download.exit_code != 0)
+                {
+                    logger.log("LibraryStore: Failed to download library store. Exit code: {}, {}",
+                               f_download.exit_code,
+                               f_download.stderr_output);
+                    logger.log("Skipping update.");
+                    return;
+                }
             }
 
             // Extract

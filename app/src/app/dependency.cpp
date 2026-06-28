@@ -270,6 +270,22 @@ roah::distb::app::Dependency::generateVariables(const AppConfig & app_config) co
     variables["generator"]    = utils::toString(app_config.getGenerator());
     variables["arch"]         = utils::toString(app_config.getArchitecture());
     variables["architecture"] = utils::toString(app_config.getArchitecture());
+    variables["is_windows"]   = false;
+    variables["is_linux"]     = false;
+    variables["is_macos"]     = false;
+
+#ifdef ROAH_ARCH_WIN32
+    variables["platform"]   = "windows";
+    variables["is_windows"] = true;
+#elif ROAH_ARCH_LINUX
+    variables["platform"] = "linux";
+    variables["is_linux"] = true;
+#elif ROAH_ARCH_MACOS
+    variables["platform"] = "macos";
+    variables["is_macos"] = true;
+#else
+#    error "Unknown platform"
+#endif
 
     // -- option は "option." の名前空間に入れる
     for (const auto & [key, value] : this->options_)
@@ -332,13 +348,13 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     }
 
     // variables 作る
-    auto variables              = this->generateVariables(app_config);
-    variables["installRootDir"] = utils::toString(app_config.getInstallDirectory().u8string());
-    variables["buildRootDir"]   = utils::toString(app_config.getBuildDirectory().u8string());
-    variables["cmakeBin"]       = utils::toString(app_config.getCMakeExecutable());
-    variables["workingDir"]     = utils::toString(build_root.u8string());
-    variables["installDir"]     = utils::toString(install_dir.u8string());
-    variables["cxxStandard"]    = cxx_standard;
+    auto variables                = this->generateVariables(app_config);
+    variables["install_root_dir"] = utils::toString(app_config.getInstallDirectory().u8string());
+    variables["build_root_dir"]   = utils::toString(app_config.getBuildDirectory().u8string());
+    variables["cmake_executable"] = utils::toString(app_config.getCMakeExecutable());
+    variables["working_dir"]      = utils::toString(build_root.u8string());
+    variables["install_dir"]      = utils::toString(install_dir.u8string());
+    variables["cxx_standard"]     = cxx_standard;
 
     std::unordered_map<std::string, std::string> dependencies;
     for (const auto & name : this->resolved_dependencies_)
@@ -375,7 +391,7 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     }
 
     // WorkingContext を作成する.
-    WorkingContextImpl working_ctx{ build_root, variables, dependencies };
+    WorkingContextImpl working_ctx{ app_config, build_root, variables, dependencies };
 
     // ビルド開始
     le.build(working_ctx);
@@ -438,7 +454,7 @@ roah::distb::app::Dependency::_calculateStateHash(const std::unordered_map<std::
     // 現在の状態をハッシュ化する.
     std::stringstream state;
     state << "version=" << this->version_ << std::endl;
-    state << "cxxStandard=" << cxx_standard << std::endl;
+    state << "cxx_standard=" << cxx_standard << std::endl;
     state << "[options]" << std::endl;
     for (const auto & [key, value] : this->options_)
     {

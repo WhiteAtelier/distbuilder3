@@ -40,8 +40,8 @@ roah::distb::config::impl::StepInstallFileImpl::operator()(const WorkingContext 
 
     // Path を決定する
     const auto & root        = context.getCurrentWorkingDirectory();
-    const auto   install_dir = utils::makeAbsolutePath(context.resolveString("${installDir}"));
-    const auto   dest_dir = utils::makeAbsolutePath(context.resolveString("${installDir}/" + this->destination_dir_));
+    const auto   install_dir = utils::makeAbsolutePath(context.resolveString("${install_dir}"));
+    const auto   dest_dir = utils::makeAbsolutePath(context.resolveString("${install_dir}/" + this->destination_dir_));
 
     logger.trace("Working directory: {}", root.u8string());
     logger.trace("Resolved destination directory path: {}", install_dir.u8string());

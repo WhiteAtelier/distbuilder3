@@ -63,6 +63,9 @@ public:
     const std::u8string &
     getCMakePresetsDefaultInstallDir() const noexcept;
 
+    const std::string &
+    getGitHubPublicAccessToken() const noexcept;
+
 private:
     static std::filesystem::path
     _getDefaultFilePath();
@@ -92,6 +95,7 @@ private:
     std::u8string                      architecture_;
     std::u8string                      cmake_presets_default_build_dir_;
     std::u8string                      cmake_presets_default_install_dir_;
+    std::string                        github_public_access_token_;
 };
 
 }  // namespace roah::distb::app

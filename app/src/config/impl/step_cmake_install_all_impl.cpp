@@ -41,7 +41,7 @@ roah::distb::config::impl::StepCMakeInstallAllImpl::operator()(const WorkingCont
     // Path を決定する
     const auto & root        = context.getCurrentWorkingDirectory();
     const auto   build_dir   = utils::makeAbsolutePath(root / context.resolveString(this->build_dir_));
-    const auto   install_dir = utils::makeAbsolutePath(context.resolveString("${installDir}"));
+    const auto   install_dir = utils::makeAbsolutePath(context.resolveString("${install_dir}"));
     logger.trace("Working directory: {}", root.u8string());
     logger.trace("Resolved build directory path: {}", build_dir.u8string());
     logger.trace("Resolved install directory path: {}", install_dir.u8string());
@@ -69,14 +69,14 @@ roah::distb::config::impl::StepCMakeInstallAllImpl::operator()(const WorkingCont
 
     // install する
     std::vector<std::u8string> build_cmd{ {
-        utils::toU8String(context.resolveString("${cmakeBin}")),
+        utils::toU8String(context.resolveString("${cmake_executable}")),
         u8"--build",
         build_dir.u8string(),
         u8"--config",
         u8"",
     } };
     std::vector<std::u8string> install_cmd{ {
-        utils::toU8String(context.resolveString("${cmakeBin}")),
+        utils::toU8String(context.resolveString("${cmake_executable}")),
         u8"--install",
         build_dir.u8string(),
         u8"--prefix",

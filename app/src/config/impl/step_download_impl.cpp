@@ -2,6 +2,7 @@
 
 #include "roah/distb/errors.hpp"
 #include "roah/distb/logger.hpp"
+#include "roah/distb/utils/base32.hpp"
 #include "roah/distb/utils/hash.hpp"
 #include "roah/distb/utils/path.hpp"
 #include "roah/distb/utils/string.hpp"
@@ -23,11 +24,15 @@ roah::distb::config::impl::StepDownloadImpl::~StepDownloadImpl() noexcept = defa
 void
 roah::distb::config::impl::StepDownloadImpl::operator()(const WorkingContext & context) const
 {
-    AppError::check(!this->url_.empty(), "URL is empty.");
-    AppError::check(!this->output_.empty(), "Output path is empty.");
-    AppError::check(!this->hash_.empty(), "Hash is empty.");
+    AppError::check(!this->url_.empty(), "'url' is empty.");
+    AppError::check(!this->output_.empty(), "'output' path is empty.");
+    AppError::check(this->hash_.size() == 64, "'hash' is invalid SHA256 string.");
 
     const auto url = context.resolveString(this->url_);
+
+    // hash string を hex 解釈して, バイナリに変換する.
+    const auto hash_bin = utils::toBinaryFromHexString(this->hash_);
+    const auto hash_b32 = utils::encodeBase32(hash_bin.data(), hash_bin.size(), true, false);
 
     logger.log("Download: {}", url);
 
@@ -43,7 +48,7 @@ roah::distb::config::impl::StepDownloadImpl::operator()(const WorkingContext & c
         throw LibraryConfigError{ "StepDownloadImpl: output path is outside of the working directory." };
     }
 
-    // すでにファイルが存在する場合, その hash を検査して一致したらダウンロードをスキップする.
+    // すでに output にファイルが存在する場合, キャッシュを検証してダウンロードをスキップする.
     if (std::filesystem::exists(output))
     {
         logger.trace("Output file is already existing. Checking hash...");
@@ -59,29 +64,61 @@ roah::distb::config::impl::StepDownloadImpl::operator()(const WorkingContext & c
         std::filesystem::remove(output);
     }
 
-    // curl を使用して url からファイルをダウンロードする.
-    std::vector<std::u8string> cmd = { u8"curl", u8"--fail", u8"--location" };
+    // blob にファイルをキャッシュする.
+    // -- blob path は 53文字の base32 文字列で表される SHA256 ハッシュ値をファイル名とする.
+    // -- そのため, blob_dir / <2文字>/<2文字>/<2文字>/<のこり> というディレクトリ構造にする.
+    const auto blob_dir       = context.getbuild_root_directory() / "_blob";
+    const auto blob_file_path = blob_dir / hash_b32.substr(0, 2) / hash_b32.substr(2, 2)  //
+                              / hash_b32.substr(4, 2) / hash_b32.substr(6);
+    logger.trace("Blob filepath: {}", blob_file_path.u8string());
 
-    cmd.emplace_back(u8"-o");
-    cmd.emplace_back(output.u8string());
-    cmd.emplace_back(utils::toU8String(url));
-
-    logger.trace("Downloading...");
-    const auto result = utils::run(cmd,
-                                   {
-                                       .print_stdout = logger.isVerbose(),
-                                       .print_stderr = logger.isVerbose(),
-                                   });
-    if (result.exit_code != 0)
+    // blob にファイルがなければダウンロードする
+    if (!std::filesystem::exists(blob_file_path))
     {
-        throw AppError{ "StepDownloadImpl: curl exited with code " + std::to_string(result.exit_code) + "." };
+        std::filesystem::create_directories(blob_dir);
+
+        const auto tmp_output = blob_dir / "data";
+
+        // curl を使用して url からファイルをダウンロードする.
+        std::vector<std::u8string> cmd = { u8"curl", u8"--fail", u8"--location" };
+
+        // https://github.com から始まるパスで, PAT が設定されていれば, Authorization ヘッダを追加する.
+        if (url.starts_with("https://github.com/") && !context.getGitHubPublicAccessToken().empty())
+        {
+            cmd.emplace_back(u8"-H");
+            cmd.emplace_back(u8"Authorization: Bearer " + utils::toU8String(context.getGitHubPublicAccessToken()));
+        }
+
+        cmd.emplace_back(u8"-o");
+        cmd.emplace_back(tmp_output.u8string());
+        cmd.emplace_back(utils::toU8String(url));
+
+        logger.trace("Downloading...");
+        const auto result = utils::run(cmd,
+                                       {
+                                           .print_stdout = logger.isVerbose(),
+                                           .print_stderr = logger.isVerbose(),
+                                       });
+        if (result.exit_code != 0)
+        {
+            std::filesystem::remove(tmp_output);
+            throw AppError{ "StepDownloadImpl: curl exited with code " + std::to_string(result.exit_code) + "." };
+        }
+
+        // hash 検証
+        logger.trace("hash calculating... Expected = {}", this->hash_);
+        const auto actual = this->_calculateHash(tmp_output);
+        logger.trace("hash calculated.    Actual   = {}", actual);
+        AppError::check(actual == this->hash_, "StepDownloadImpl: SHA-256 hash mismatch. URL = {}", url);
+
+        // 検証後ファイルをリネームし, hash base のファイル名にする.
+        // -- blob_file_path は存在しないはず
+        std::filesystem::create_directories(blob_file_path.parent_path());
+        std::filesystem::rename(tmp_output, blob_file_path);
     }
 
-    // 再度 hash 検証
-    logger.trace("hash calculating... Expected = {}", this->hash_);
-    const auto actual = this->_calculateHash(output);
-    logger.trace("hash calculated.    Actual   = {}", actual);
-    AppError::check(actual == this->hash_, "StepDownloadImpl: SHA-256 hash mismatch. URL = {}", url);
+    // blob から output へコピーする
+    std::filesystem::copy(blob_file_path, output);
 
     logger.log("Download OK.");
 }
