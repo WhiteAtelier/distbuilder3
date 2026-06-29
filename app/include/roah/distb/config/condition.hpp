@@ -38,6 +38,9 @@ public:
     eval(const Variables & variables) const
         = 0;
 
+    virtual std::unique_ptr<Condition>
+    clone() const = 0;
+
 private:
     std::string_view op_name_;
 };

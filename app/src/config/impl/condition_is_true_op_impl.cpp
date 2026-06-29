@@ -28,3 +28,18 @@ roah::distb::config::impl::ConditionIsTrueOpImpl::loadFromJson(const nlohmann::j
         ConditionIsOpImpl::loadFromJson(json);
     }
 }
+
+std::unique_ptr<roah::distb::config::Condition>
+roah::distb::config::impl::ConditionIsTrueOpImpl::clone() const
+{
+    auto ret = std::make_unique<ConditionIsTrueOpImpl>();
+    if (std::holds_alternative<std::unique_ptr<Condition>>(this->value_))
+    {
+        ret->value_ = std::get<std::unique_ptr<Condition>>(this->value_)->clone();
+    }
+    else
+    {
+        ret->value_ = std::get<utils::OptionValue>(this->value_);
+    }
+    return ret;
+}

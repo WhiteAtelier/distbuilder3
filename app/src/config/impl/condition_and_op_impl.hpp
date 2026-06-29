@@ -18,6 +18,9 @@ public:
 
     bool
     eval(const Variables & variables) const override;
+
+    std::unique_ptr<Condition>
+    clone() const override;
 };
 
 }  // namespace roah::distb::config::impl
