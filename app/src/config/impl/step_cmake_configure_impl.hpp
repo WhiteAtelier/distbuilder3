@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace roah::distb::config {
 class Condition;
@@ -51,6 +52,7 @@ private:
     std::string                       source_dir_;
     std::string                       build_dir_;
     std::map<std::string, ArgsSubset> args_;
+    std::vector<std::string>          configs_;
 };
 
 }  // namespace roah::distb::config::impl

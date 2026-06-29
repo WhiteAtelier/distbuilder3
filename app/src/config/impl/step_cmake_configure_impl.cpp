@@ -17,6 +17,7 @@ roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl()
     : StepDef{ kCmd }
     , source_dir_{ "src" }
     , build_dir_{ "build" }
+    , configs_{ "Debug", "Release" }
 {}
 
 roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl(const StepCMakeConfigureImpl &) = default;
@@ -110,7 +111,18 @@ roah::distb::config::impl::StepCMakeConfigureImpl::operator()(WorkingContext & c
         }
     }
     cmd.emplace_back(u8"-DCMAKE_DEBUG_POSTFIX=d");
-    cmd.emplace_back(u8"-DCMAKE_CONFIGURATION_TYPES=Debug;Release");
+
+    std::string config_types;
+    for (const auto & config : this->configs_)
+    {
+        if (!config_types.empty())
+        {
+            config_types += ";";
+        }
+        config_types += config;
+    }
+    cmd.emplace_back(u8"-DCMAKE_CONFIGURATION_TYPES=" + utils::toU8String(config_types));
+
     if (const auto cxx_standard = context.resolveString("${cxx_standard}");  //
         !cxx_standard.empty())
     {
@@ -169,6 +181,26 @@ roah::distb::config::impl::StepCMakeConfigureImpl::loadFromJson(const nlohmann::
 {
     this->_getStringFromJson(kCmd, json, "source_dir", this->source_dir_);
     this->_getStringFromJson(kCmd, json, "build_dir", this->build_dir_);
+
+    if (const auto i_configs = json.find("configs"); i_configs != json.end())
+    {
+        if (i_configs->is_array())
+        {
+            this->configs_.clear();
+            for (const auto & config : *i_configs)
+            {
+                if (!config.is_string())
+                {
+                    throw LibraryConfigError{ "Invalid 'configs' field: expected an array of strings." };
+                }
+                this->configs_.emplace_back(config.get<std::string>());
+            }
+        }
+        else
+        {
+            throw LibraryConfigError{ "Invalid 'configs' field: expected an array." };
+        }
+    }
 
     if (const auto i_args = json.find("args"); i_args != json.end())
     {

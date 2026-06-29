@@ -34,7 +34,8 @@ public:
     loadFromJson(const nlohmann::json & json) override;
 
 private:
-    std::string build_dir_;
+    std::string              build_dir_;
+    std::vector<std::string> configs_;
 };
 
 }  // namespace roah::distb::config::impl

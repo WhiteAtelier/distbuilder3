@@ -14,6 +14,7 @@
 
 roah::distb::config::impl::StepCMakeInstallAllImpl::StepCMakeInstallAllImpl()
     : StepDef{ kCmd }
+    , configs_{ "Debug", "Release" }
 {}
 
 roah::distb::config::impl::StepCMakeInstallAllImpl::StepCMakeInstallAllImpl(const StepCMakeInstallAllImpl &) = default;
@@ -107,8 +108,10 @@ roah::distb::config::impl::StepCMakeInstallAllImpl::operator()(WorkingContext & 
         logger.log("CMake install ({}) completed successfully.", config);
     };
 
-    build_fn(u8"Debug");
-    build_fn(u8"Release");
+    for (const auto & config : this->configs_)
+    {
+        build_fn(utils::toU8String(config));
+    }
 }
 
 std::unique_ptr<roah::distb::config::StepDef>
@@ -121,4 +124,24 @@ void
 roah::distb::config::impl::StepCMakeInstallAllImpl::loadFromJson(const nlohmann::json & json)
 {
     this->_getStringFromJson(kCmd, json, "build_dir", this->build_dir_);
+
+    if (const auto i_configs = json.find("configs"); i_configs != json.end())
+    {
+        if (i_configs->is_array())
+        {
+            this->configs_.clear();
+            for (const auto & config : *i_configs)
+            {
+                if (!config.is_string())
+                {
+                    throw LibraryConfigError{ "Invalid 'configs' field: expected an array of strings." };
+                }
+                this->configs_.emplace_back(config.get<std::string>());
+            }
+        }
+        else
+        {
+            throw LibraryConfigError{ "Invalid 'configs' field: expected an array." };
+        }
+    }
 }
