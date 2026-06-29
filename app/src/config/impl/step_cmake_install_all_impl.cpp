@@ -25,7 +25,7 @@ roah::distb::config::impl::StepCMakeInstallAllImpl::StepCMakeInstallAllImpl(Step
 roah::distb::config::impl::StepCMakeInstallAllImpl::~StepCMakeInstallAllImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepCMakeInstallAllImpl::operator()(WorkingContext & context) const
+roah::distb::config::impl::StepCMakeInstallAllImpl::_execute(WorkingContext & context) const
 {
     AppError::check(!this->build_dir_.empty(), "Build directory is empty.");
 
@@ -121,7 +121,7 @@ roah::distb::config::impl::StepCMakeInstallAllImpl::clone() const
 }
 
 void
-roah::distb::config::impl::StepCMakeInstallAllImpl::loadFromJson(const nlohmann::json & json)
+roah::distb::config::impl::StepCMakeInstallAllImpl::_loadFromJson(const nlohmann::json & json)
 {
     this->_getStringFromJson(kCmd, json, "build_dir", this->build_dir_);
 

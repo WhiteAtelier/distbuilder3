@@ -31,16 +31,16 @@ public:
 
     ~StepCMakeConfigureImpl() noexcept override;
 
-    void
-    operator()(WorkingContext & context) const override;
-
     std::unique_ptr<StepDef>
     clone() const override;
 
-    void
-    loadFromJson(const nlohmann::json & json) override;
-
 private:
+    void
+    _execute(WorkingContext & context) const override;
+
+    void
+    _loadFromJson(const nlohmann::json & json) override;
+
     using ConditionHolder = utils::DelayCopyableContainer<Condition>;
 
     struct ArgsSubset
@@ -51,6 +51,7 @@ private:
 
     std::string                       source_dir_;
     std::string                       build_dir_;
+    std::string                       debug_postfix_;
     std::map<std::string, ArgsSubset> args_;
     std::vector<std::string>          configs_;
 };

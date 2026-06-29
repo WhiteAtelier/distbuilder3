@@ -1,8 +1,11 @@
 #ifndef ROAH_DISTB_APP_APP_CONFIG_HPP
 #define ROAH_DISTB_APP_APP_CONFIG_HPP
 
+#include "access_token.hpp"
+
 #include <filesystem>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace roah::distb::app {
@@ -64,7 +67,7 @@ public:
     getCMakePresetsDefaultInstallDir() const noexcept;
 
     const std::string &
-    getGitHubPublicAccessToken() const noexcept;
+    getAccessToken(const std::string & site, const std::string & key) const noexcept;
 
 private:
     static std::filesystem::path
@@ -82,20 +85,20 @@ private:
     void
     _createTemplate();
 
-    const std::filesystem::path        executable_dir_;
-    const std::filesystem::path        app_storage_path_;
-    const std::filesystem::path        default_search_path_;
+    const std::filesystem::path                  executable_dir_;
+    const std::filesystem::path                  app_storage_path_;
+    const std::filesystem::path                  default_search_path_;
     //
-    std::filesystem::path              file_path_;
-    std::filesystem::path              build_dir_;
-    std::filesystem::path              install_dir_;
-    std::vector<std::filesystem::path> search_paths_;
-    std::u8string                      cmake_executable_;
-    std::u8string                      generator_;
-    std::u8string                      architecture_;
-    std::u8string                      cmake_presets_default_build_dir_;
-    std::u8string                      cmake_presets_default_install_dir_;
-    std::string                        github_public_access_token_;
+    std::filesystem::path                        file_path_;
+    std::filesystem::path                        build_dir_;
+    std::filesystem::path                        install_dir_;
+    std::vector<std::filesystem::path>           search_paths_;
+    std::u8string                                cmake_executable_;
+    std::u8string                                generator_;
+    std::u8string                                architecture_;
+    std::u8string                                cmake_presets_default_build_dir_;
+    std::u8string                                cmake_presets_default_install_dir_;
+    std::unordered_map<std::string, AccessToken> access_tokens_;
 };
 
 }  // namespace roah::distb::app

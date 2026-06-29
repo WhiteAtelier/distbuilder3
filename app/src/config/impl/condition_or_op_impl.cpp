@@ -21,3 +21,14 @@ roah::distb::config::impl::ConditionOrOpImpl::eval(const Variables & variables) 
     }
     return false;
 }
+
+std::unique_ptr<roah::distb::config::Condition>
+roah::distb::config::impl::ConditionOrOpImpl::clone() const
+{
+    auto ret = std::make_unique<ConditionOrOpImpl>();
+    for (const auto & child : this->children_)
+    {
+        ret->children_.emplace_back(child->clone());
+    }
+    return ret;
+}

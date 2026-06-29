@@ -2,8 +2,8 @@
 
 #include "roah/distb/errors.hpp"
 #include "roah/distb/logger.hpp"
-#include "roah/distb/utils/path.hpp"
 #include "roah/distb/utils/option_value.hpp"
+#include "roah/distb/utils/path.hpp"
 #include "roah/distb/utils/string.hpp"
 #include "roah/distb/utils/subprocess.hpp"
 #include "roah/distb/working_context.hpp"
@@ -36,7 +36,7 @@ roah::distb::config::impl::StepExtractImpl::StepExtractImpl(StepExtractImpl &&) 
 roah::distb::config::impl::StepExtractImpl::~StepExtractImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepExtractImpl::operator()(WorkingContext & context) const
+roah::distb::config::impl::StepExtractImpl::_execute(WorkingContext & context) const
 {
     AppError::check(!this->input_.empty(), "Input is empty.");
     AppError::check(!this->output_.empty(), "Output path is empty.");
@@ -116,7 +116,7 @@ roah::distb::config::impl::StepExtractImpl::clone() const
 }
 
 void
-roah::distb::config::impl::StepExtractImpl::loadFromJson(const nlohmann::json & json)
+roah::distb::config::impl::StepExtractImpl::_loadFromJson(const nlohmann::json & json)
 {
     this->_getStringFromJson(kCmd, json, "input", this->input_);
     this->_getStringFromJson(kCmd, json, "output", this->output_);

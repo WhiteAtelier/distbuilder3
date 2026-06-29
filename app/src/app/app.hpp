@@ -26,12 +26,6 @@ public:
 
     ~App() noexcept;
 
-    bool
-    hasDependency(const std::string_view name) const;
-
-    Dependency &
-    addDependency(std::string author, std::string repo);
-
 private:
     App(std::filesystem::path executable_dir);
 

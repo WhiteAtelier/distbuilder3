@@ -21,6 +21,9 @@ public:
 
     void
     loadFromJson(const nlohmann::json & json) override;
+
+    std::unique_ptr<Condition>
+    clone() const override;
 };
 
 }  // namespace roah::distb::config::impl

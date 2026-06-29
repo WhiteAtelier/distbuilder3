@@ -24,6 +24,8 @@ public:
                      std::string                url,
                      std::string                output,
                      std::string                hash,
+                     std::string                access_token_site,
+                     std::string                access_token_key,
                      std::vector<std::u8string> curl_extra_args = {});
 
     StepDownloadImpl(const StepDownloadImpl &);
@@ -31,14 +33,8 @@ public:
 
     ~StepDownloadImpl() noexcept override;
 
-    void
-    operator()(WorkingContext & context) const override;
-
     std::unique_ptr<StepDef>
     clone() const override;
-
-    void
-    loadFromJson(const nlohmann::json & json) override;
 
     const std::string &
     getUrl() const noexcept;
@@ -50,12 +46,20 @@ public:
     getHashAsHexString() const noexcept;
 
 private:
+    void
+    _execute(WorkingContext & context) const override;
+
+    void
+    _loadFromJson(const nlohmann::json & json) override;
+
     std::string
     _calculateHash(const std::filesystem::path & path) const;
 
     std::string                url_;
     std::string                output_;
     std::string                hash_;
+    std::string                access_token_site_;
+    std::string                access_token_key_;
     //
     std::vector<std::u8string> curl_extra_args_;
 };

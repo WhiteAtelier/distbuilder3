@@ -14,6 +14,8 @@ class WorkingContext;
 
 namespace roah::distb::config {
 
+class Condition;
+
 // ライブラリのビルドステップの定義を表すクラス.
 // cmd フィールドによってステップの種別が決まり, 種別ごとに有効なフィールドが異なる.
 // todo: Step class に名前変える
@@ -33,13 +35,11 @@ public:
         = delete;
     virtual ~StepDef() noexcept;
 
-    virtual void
-    loadFromJson(const nlohmann::json & json)
-        = 0;
+    void
+    loadFromJson(const nlohmann::json & json);
 
-    virtual void
-    operator()(WorkingContext & context) const
-        = 0;
+    void
+    operator()(WorkingContext & context) const;
 
     virtual std::unique_ptr<StepDef>
     clone() const = 0;
@@ -48,6 +48,14 @@ public:
     getCmd() const noexcept;
 
 protected:
+    virtual void
+    _loadFromJson(const nlohmann::json & json)
+        = 0;
+
+    virtual void
+    _execute(WorkingContext & context) const
+        = 0;
+
     static bool
     _getStringFromJson(const std::string_view cmd,
                        const nlohmann::json & json,
@@ -61,7 +69,8 @@ protected:
                      bool &                 out);
 
 private:
-    std::string_view cmd_;
+    std::string_view           cmd_;
+    std::unique_ptr<Condition> condition_;
 };
 
 std::unique_ptr<StepDef>
