@@ -331,12 +331,6 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     // まず state hash を計算する.
     this->_calculateStateHash(all_dependencies, cxx_standard);
 
-    if (dryrun)
-    {
-        logger.log("Dependency {}.{}: Dry run. Skip build.", this->getAuthor(), this->getRepo());
-        return;
-    }
-
     const auto & le = this->getLibraryEntityConfigOfSelectedVersion();
 
     // license が設定されていない場合はエラーにする.
@@ -509,6 +503,12 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     }
 
     logger.trace("-------------------------------------------------");
+
+    if (dryrun)
+    {
+        logger.log("Dependency {}.{}: Dry run. Skip build.", this->getAuthor(), this->getRepo());
+        return;
+    }
 
     // インストールディレクトリが存在した場合はスキップにする.
     if (!force_build && std::filesystem::exists(install_dir))
