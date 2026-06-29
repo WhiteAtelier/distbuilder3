@@ -58,7 +58,7 @@ public:
     getOptions() const noexcept;
 
     void
-    loadLibraryConfig(const AppConfig & app_config);
+    loadLibraryConfig(const AppConfig & app_config, const config::Variables & override_options);
 
     const config::Library &
     getLibraryConfig() const noexcept;
@@ -87,7 +87,9 @@ public:
 
 private:
     bool
-    _loadLibraryConfig(const std::filesystem::path & path, const AppConfig & app_config);
+    _loadLibraryConfig(const std::filesystem::path & path,
+                       const AppConfig &             app_config,
+                       const config::Variables &     override_options);
 
     void
     _calculateStateHash(const std::unordered_map<std::string, Dependency> & all_dependencies,

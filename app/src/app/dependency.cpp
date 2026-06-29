@@ -9,11 +9,13 @@
 #include "roah/distb/utils/base32.hpp"
 #include "roah/distb/utils/hash.hpp"
 #include "roah/distb/utils/string.hpp"
+#include "roah/distb/utils/string_expander.hpp"
 
 #include <cstdint>
 #include <fstream>
 #include <ranges>
 #include <sstream>
+#include <stdexcept>
 #include <unordered_set>
 
 namespace {
@@ -173,7 +175,8 @@ roah::distb::app::Dependency::getOptions() const noexcept
 }
 
 void
-roah::distb::app::Dependency::loadLibraryConfig(const AppConfig & app_config)
+roah::distb::app::Dependency::loadLibraryConfig(const AppConfig &         app_config,
+                                                const config::Variables & override_options)
 {
     if (this->library_conf_loaded_)
     {
@@ -184,8 +187,8 @@ roah::distb::app::Dependency::loadLibraryConfig(const AppConfig & app_config)
     const auto   file_name    = this->getAuthor() + "." + this->getRepo();
     for (const auto & path : search_paths)
     {
-        if (this->_loadLibraryConfig(path / (file_name + ".jsonc"), app_config)
-            || this->_loadLibraryConfig(path / (file_name + ".json"), app_config))
+        if (this->_loadLibraryConfig(path / (file_name + ".jsonc"), app_config, override_options)
+            || this->_loadLibraryConfig(path / (file_name + ".json"), app_config, override_options))
         {
             this->library_conf_loaded_ = true;
             return;
@@ -195,16 +198,29 @@ roah::distb::app::Dependency::loadLibraryConfig(const AppConfig & app_config)
 }
 
 bool
-roah::distb::app::Dependency::_loadLibraryConfig(const std::filesystem::path & path, const AppConfig & app_config)
+roah::distb::app::Dependency::_loadLibraryConfig(const std::filesystem::path & path,
+                                                 const AppConfig &             app_config,
+                                                 const config::Variables &     override_options)
 {
     std::ifstream ifst{ path };
     if (ifst)
     {
+        // 先に, すでにある option に対して override を行う.
+        // この時点では, deps.toml によって指定された option しか存在しない.
+        // すでに存在する option は上書きしない.
+        // 変数評価できていないため, ここではエラーにできない.
+        // 後程 build 時に, 変数評価して, もし conflict があればエラーになる.
+        for (const auto & [key, value] : override_options)
+        {
+            this->options_.try_emplace(key, value);
+        }
+
+        // レシピ読み込み
         this->library_conf_.loadFromJson(ifst);
 
+        // バージョン指定がない場合は, 最新をセットする.
         if (this->version_.empty())
         {
-            // 最新をセットする.
             const auto & versions = this->library_conf_.getAllVersions();
             if (versions.empty())
             {
@@ -321,16 +337,6 @@ roah::distb::app::Dependency::build(const AppConfig &                           
         return;
     }
 
-    // インストールディレクトリが存在した場合はスキップにする.
-    const auto install_dir = app_config.getInstallDirectory()             //
-                           / (this->getAuthor() + "." + this->getRepo())  //
-                           / this->state_hash_;
-    if (!force_build && std::filesystem::exists(install_dir))
-    {
-        logger.log("Dependency {}.{}: Already built. Skip.", this->getAuthor(), this->getRepo());
-        return;
-    }
-
     const auto & le = this->getLibraryEntityConfigOfSelectedVersion();
 
     // license が設定されていない場合はエラーにする.
@@ -341,14 +347,20 @@ roah::distb::app::Dependency::build(const AppConfig &                           
                                   this->getRepo() };
     }
 
-    // ビルド用のディレクトリを作る
+    const auto install_dir = app_config.getInstallDirectory()             //
+                           / (this->getAuthor() + "." + this->getRepo())  //
+                           / this->state_hash_;
     const auto build_root = app_config.getBuildDirectory()               //
                           / (this->getAuthor() + "." + this->getRepo())  //
                           / this->state_hash_;
-    if (!std::filesystem::exists(build_root))
-    {
-        std::filesystem::create_directories(build_root);
-    }
+
+    logger.trace("-----------------------------------------------------------");
+    logger.trace("[Build] Library '{}.{}'", this->getAuthor(), this->getRepo());
+    logger.trace("-----------------------------------------------------------");
+    logger.trace("-- Version     = {}", this->getVersion());
+    logger.trace("-- State hash  = {}", this->state_hash_);
+    logger.trace("-- Build dir   = {}", utils::toString(build_root.u8string()));
+    logger.trace("-- Install dir = {}", utils::toString(install_dir.u8string()));
 
     // variables 作る
     auto variables                = this->generateVariables(app_config);
@@ -359,12 +371,62 @@ roah::distb::app::Dependency::build(const AppConfig &                           
     variables["install_dir"]      = utils::toString(install_dir.u8string());
     variables["cxx_standard"]     = cxx_standard;
 
+    const auto print_value_fn = [](const std::string_view prefix, const auto & key, const auto & value) {
+        if (value.hasString())
+        {
+            logger.trace("{}-- {:<24} = <str> '{}'", prefix, key, static_cast<std::string>(value));
+        }
+        else if (value.hasBool())
+        {
+            logger.trace("{}-- {:<24} = <bool> {}", prefix, key, static_cast<std::string>(value));
+        }
+        else if (value.hasInt())
+        {
+            logger.trace("{}-- {:<24} = <int> {}", prefix, key, static_cast<std::string>(value));
+        }
+        else if (value.hasDouble())
+        {
+            logger.trace("{}-- {:<24} = <double> {}", prefix, key, static_cast<std::string>(value));
+        }
+        else
+        {
+            // Program error
+            throw std::runtime_error{ "Unknown variable type for key: " + key };
+        }
+    };
+
+    if (logger.isVerbose())
+    {
+        logger.trace("-- Options ------------------------------------------------");
+        for (const auto & [key, value] : this->options_)
+        {
+            print_value_fn("   ", key, value);
+        }
+
+        logger.trace("-- Variables ----------------------------------------------");
+        for (const auto & [key, value] : variables)
+        {
+            print_value_fn("   ", key, value);
+        }
+    }
+
+    logger.trace("-- Dependencies -------------------------------------------");
+    if (this->resolved_dependencies_.empty())
+    {
+        logger.trace("    (No Dependency)");
+    }
+
     std::unordered_map<std::string, std::string> dependencies;
     for (const auto & name : this->resolved_dependencies_)
     {
+        logger.trace("   -- {}", name);
+
         // 依存のバージョン一致を判定する.
         const auto & dep     = all_dependencies.at(name);
         const auto & req_dep = le.getDependencies().at(name);
+
+        logger.trace("      -- Version {}", dep.getVersion());
+
         if (!dep.checkVersionRange(req_dep.getRequiredVersionRange()))
         {
             std::string version_range_str;
@@ -390,15 +452,40 @@ roah::distb::app::Dependency::build(const AppConfig &                           
             };
         }
 
+        logger.trace("      -- Override Options ---------------------------------");
+
         // override option のチェックを行う
         const auto & dep_options = dep.getOptions();
         const auto & req_options = req_dep.getOptions();
-        for (const auto & [key, req_value] : req_options)
+        if (req_options.empty())
+        {
+            logger.trace("         (No Option)");
+        }
+        for (const auto & [key, _req_value] : req_options)
         {
             const auto iter = dep_options.find(key);
             if (iter != dep_options.end())
             {
-                const auto & dep_value = iter->second;
+                // req 側は自分の variable で展開する
+                auto req_value = _req_value;
+                if (req_value.hasString())
+                {
+                    std::string ret;
+                    utils::expandTemplate(static_cast<std::string>(req_value), variables, ret);
+                    req_value = ret;
+                }
+                print_value_fn("         ", "(request) " + key, req_value);
+
+                // dep 側は dep 側の variable で展開する
+                auto dep_value = iter->second;
+                if (dep_value.hasString())
+                {
+                    std::string ret;
+                    utils::expandTemplate(static_cast<std::string>(dep_value), dep.generateVariables(app_config), ret);
+                    dep_value = ret;
+                }
+                print_value_fn("         ", " (actual) " + key, dep_value);
+
                 if (dep_value != req_value)
                 {
                     throw DependencyResolveError{
@@ -419,6 +506,21 @@ roah::distb::app::Dependency::build(const AppConfig &                           
         }
 
         dependencies[name] = dep.getStateHash();
+    }
+
+    logger.trace("-------------------------------------------------");
+
+    // インストールディレクトリが存在した場合はスキップにする.
+    if (!force_build && std::filesystem::exists(install_dir))
+    {
+        logger.log("Dependency {}.{}: Already built. Skip.", this->getAuthor(), this->getRepo());
+        return;
+    }
+
+    // ビルド用のディレクトリを作る
+    if (!std::filesystem::exists(build_root))
+    {
+        std::filesystem::create_directories(build_root);
     }
 
     // WorkingContext を作成する.

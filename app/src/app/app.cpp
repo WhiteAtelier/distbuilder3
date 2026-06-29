@@ -46,6 +46,12 @@ public:
     run(int argc, const char * const argv[]);
 
 private:
+    struct NewDependencyRequest
+    {
+        std::string       name;
+        config::Variables override_options;
+    };
+
     void
     _setupCli(CLI::App & cli_app);
 
@@ -59,13 +65,16 @@ private:
     _parseDeps();
 
     void
-    _resolveDeps(const std::vector<std::string> & library_names);
+    _resolveDeps();
+
+    void
+    _resolveDeps(const std::vector<NewDependencyRequest> & new_libraries);
 
     void
     _buildDeps();
 
     void
-    _updateDepsToml() const;
+    _exportFullDepsToml() const;
 
     void
     _exportCMakePresets() const;
@@ -201,8 +210,7 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
     this->_parseDeps();
 
     // Resolve dependencies
-    const auto library_names_range = this->dependencies_ | std::ranges::views::keys;
-    this->_resolveDeps({ library_names_range.begin(), library_names_range.end() });
+    this->_resolveDeps();
 
     // Print: All Dependency
     for (const auto & dep : this->all_dependencies_ | std::ranges::views::values)
@@ -214,7 +222,7 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
     this->_buildDeps();
 
     // Update deps.full.toml
-    this->_updateDepsToml();
+    this->_exportFullDepsToml();
 
     // Export CMakePresets
     this->_exportCMakePresets();
@@ -529,27 +537,53 @@ roah::distb::app::App::Impl_::_parseDeps()
 // [PRIVATE] _resolveDeps()
 // ============================================================================================= //
 void
-roah::distb::app::App::Impl_::_resolveDeps(const std::vector<std::string> & library_names)
+roah::distb::app::App::Impl_::_resolveDeps()
 {
-    std::vector<std::string> new_library_names;
-    for (const auto & name : library_names)
+    std::vector<NewDependencyRequest> new_libraries;
+    new_libraries.reserve(this->dependencies_.size());
+
+    for (const auto & root_dep_name : this->dependencies_ | std::ranges::views::keys)
     {
-        auto & dep = this->all_dependencies_.at(name);
-        dep.loadLibraryConfig(this->app_config_);
+        new_libraries.emplace_back(NewDependencyRequest{ .name = root_dep_name });
+    }
+    this->_resolveDeps(new_libraries);
+}
+
+void
+roah::distb::app::App::Impl_::_resolveDeps(const std::vector<NewDependencyRequest> & libraries)
+{
+    std::vector<NewDependencyRequest> new_libraries;
+    for (const auto & library : libraries)
+    {
+        auto & dep = this->all_dependencies_.at(library.name);
+        dep.loadLibraryConfig(this->app_config_, library.override_options);
+        const auto & dep_ds = dep.getLibraryEntityConfigOfSelectedVersion().getDependencies();
 
         for (const auto & child_dep_name : dep.getResolvedDependencies())
         {
             if (this->all_dependencies_.try_emplace(child_dep_name, child_dep_name).second)
             {
                 // 新しく追加された.
-                new_library_names.emplace_back(child_dep_name);
+
+                // 依存先が, ほかのライブラリに使われていないときに限って,
+                // override option がそのまま適用されるようにする.
+                // もしくは依存先が複数のライブラリに使われている場合,
+                // すでに設定されている option と同じでなければエラーになる.
+                new_libraries.emplace_back(NewDependencyRequest{
+                    .name             = child_dep_name,
+                    .override_options = dep_ds.at(child_dep_name).getOptions(),
+                });
             }
+            // else:
+            // すでに追加されている場合, override option が同じでなければエラーになる.
+            // ただし, option の値そのものは variables で評価しなければならないので, ここではチェックは行わない.
+            // build() 時に判定する.
         }
     }
 
-    if (!new_library_names.empty())
+    if (!new_libraries.empty())
     {
-        this->_resolveDeps(new_library_names);
+        this->_resolveDeps(new_libraries);
     }
 }
 
@@ -625,19 +659,19 @@ roah::distb::app::App::Impl_::_buildDeps()
 }
 
 // ============================================================================================= //
-// [PRIVATE] _updateDepsToml()
+// [PRIVATE] _exportFullDepsToml()
 // ============================================================================================= //
 void
-roah::distb::app::App::Impl_::_updateDepsToml() const
+roah::distb::app::App::Impl_::_exportFullDepsToml() const
 {
     // deps name を sort する.
-    auto                  dep_name_range = this->dependencies_ | std::ranges::views::keys;
+    auto                  dep_name_range = this->all_dependencies_ | std::ranges::views::keys;
     std::set<std::string> sorted_names{ dep_name_range.begin(), dep_name_range.end() };
 
     toml::value root;
     for (const auto & name : sorted_names)
     {
-        const auto & dep   = this->dependencies_.at(name).get();
+        const auto & dep   = this->all_dependencies_.at(name);
         auto &       t_dep = root[dep.getAuthor()][dep.getRepo()];
         t_dep["version"]   = dep.getVersion();
 
