@@ -18,17 +18,23 @@
 
 roah::distb::config::impl::StepDownloadImpl::StepDownloadImpl()
     : StepDef{ kCmd }
+    , access_token_key_{ "default" }
+    , access_token_site_{}
 {}
 
 roah::distb::config::impl::StepDownloadImpl::StepDownloadImpl(const std::string_view     cmd_name_driven_by,
                                                               std::string                url,
                                                               std::string                output,
                                                               std::string                hash,
+                                                              std::string                access_token_site,
+                                                              std::string                access_token_key,
                                                               std::vector<std::u8string> curl_extra_args)
     : StepDef{ cmd_name_driven_by }
     , url_{ std::move(url) }
     , output_{ std::move(output) }
     , hash_{ std::move(hash) }
+    , access_token_site_{ std::move(access_token_site) }
+    , access_token_key_{ std::move(access_token_key) }
     , curl_extra_args_{ std::move(curl_extra_args) }
 {}
 
@@ -39,7 +45,7 @@ roah::distb::config::impl::StepDownloadImpl::StepDownloadImpl(StepDownloadImpl &
 roah::distb::config::impl::StepDownloadImpl::~StepDownloadImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepDownloadImpl::operator()(WorkingContext & context) const
+roah::distb::config::impl::StepDownloadImpl::_execute(WorkingContext & context) const
 {
     AppError::check(!this->url_.empty(), "'url' is empty.");
     AppError::check(!this->output_.empty(), "'output' path is empty.");
@@ -103,6 +109,14 @@ roah::distb::config::impl::StepDownloadImpl::operator()(WorkingContext & context
         // curl を使用して url からファイルをダウンロードする.
         std::vector<std::u8string> cmd = { u8"curl", u8"--fail", u8"--location" };
 
+        // Authorization
+        if (const auto & token = context.getAccessToken(this->access_token_site_, this->access_token_key_);
+            !token.empty())
+        {
+            cmd.emplace_back(u8"-H");
+            cmd.emplace_back(u8"Authorization: Bearer " + utils::toU8String(token));
+        }
+
         // extra args
         cmd.insert(cmd.end(), this->curl_extra_args_.begin(), this->curl_extra_args_.end());
 
@@ -150,11 +164,13 @@ roah::distb::config::impl::StepDownloadImpl::clone() const
 }
 
 void
-roah::distb::config::impl::StepDownloadImpl::loadFromJson(const nlohmann::json & json)
+roah::distb::config::impl::StepDownloadImpl::_loadFromJson(const nlohmann::json & json)
 {
     this->_getStringFromJson(kCmd, json, "url", this->url_);
     this->_getStringFromJson(kCmd, json, "output", this->output_);
     this->_getStringFromJson(kCmd, json, "hash", this->hash_);
+    this->_getStringFromJson(kCmd, json, "access_token_site", this->access_token_site_);
+    this->_getStringFromJson(kCmd, json, "access_token_key", this->access_token_key_);
 }
 
 const std::string &

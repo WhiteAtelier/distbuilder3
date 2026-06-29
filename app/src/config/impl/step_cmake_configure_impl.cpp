@@ -17,6 +17,7 @@ roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl()
     : StepDef{ kCmd }
     , source_dir_{ "src" }
     , build_dir_{ "build" }
+    , debug_postfix_{ "d" }
     , configs_{ "Debug", "Release" }
 {}
 
@@ -27,7 +28,7 @@ roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl(StepCM
 roah::distb::config::impl::StepCMakeConfigureImpl::~StepCMakeConfigureImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepCMakeConfigureImpl::operator()(WorkingContext & context) const
+roah::distb::config::impl::StepCMakeConfigureImpl::_execute(WorkingContext & context) const
 {
     AppError::check(!this->source_dir_.empty(), "Source directory is empty.");
     AppError::check(!this->build_dir_.empty(), "Build directory is empty.");
@@ -110,7 +111,10 @@ roah::distb::config::impl::StepCMakeConfigureImpl::operator()(WorkingContext & c
             }
         }
     }
-    cmd.emplace_back(u8"-DCMAKE_DEBUG_POSTFIX=d");
+    if (!this->debug_postfix_.empty())
+    {
+        cmd.emplace_back(u8"-DCMAKE_DEBUG_POSTFIX=" + utils::toU8String(this->debug_postfix_));
+    }
 
     std::string config_types;
     for (const auto & config : this->configs_)
@@ -177,10 +181,11 @@ roah::distb::config::impl::StepCMakeConfigureImpl::clone() const
 }
 
 void
-roah::distb::config::impl::StepCMakeConfigureImpl::loadFromJson(const nlohmann::json & json)
+roah::distb::config::impl::StepCMakeConfigureImpl::_loadFromJson(const nlohmann::json & json)
 {
     this->_getStringFromJson(kCmd, json, "source_dir", this->source_dir_);
     this->_getStringFromJson(kCmd, json, "build_dir", this->build_dir_);
+    this->_getStringFromJson(kCmd, json, "debug_postfix", this->debug_postfix_);
 
     if (const auto i_configs = json.find("configs"); i_configs != json.end())
     {

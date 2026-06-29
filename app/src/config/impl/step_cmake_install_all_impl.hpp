@@ -24,16 +24,16 @@ public:
 
     ~StepCMakeInstallAllImpl() noexcept override;
 
-    void
-    operator()(WorkingContext & context) const override;
-
     std::unique_ptr<StepDef>
     clone() const override;
 
-    void
-    loadFromJson(const nlohmann::json & json) override;
-
 private:
+    void
+    _execute(WorkingContext & context) const override;
+
+    void
+    _loadFromJson(const nlohmann::json & json) override;
+
     std::string              build_dir_;
     std::vector<std::string> configs_;
 };

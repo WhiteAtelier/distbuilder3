@@ -6,7 +6,10 @@
 #include "impl/step_extract_impl.hpp"
 #include "impl/step_github_download_impl.hpp"
 #include "impl/step_install_file_impl.hpp"
+#include "roah/distb/config/condition.hpp"
 #include "roah/distb/errors.hpp"
+#include "roah/distb/logger.hpp"
+#include "roah/distb/working_context.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -18,10 +21,41 @@ roah::distb::config::StepDef::StepDef(const std::string_view cmd)
     : cmd_{ cmd }
 {}
 
-roah::distb::config::StepDef::StepDef(const StepDef &)     = default;
+roah::distb::config::StepDef::StepDef(const StepDef & cp)
+    : cmd_{ cp.cmd_ }
+    , condition_{ cp.condition_ ? cp.condition_->clone() : nullptr }
+{}
 roah::distb::config::StepDef::StepDef(StepDef &&) noexcept = default;
 
 roah::distb::config::StepDef::~StepDef() noexcept = default;
+
+void
+roah::distb::config::StepDef::loadFromJson(const nlohmann::json & json)
+{
+    // condition
+    if (const auto i_condition = json.find("condition"); i_condition != json.end())
+    {
+        this->condition_ = makeConditionFromJson(*i_condition);
+        this->condition_->loadFromJson(*i_condition);
+    }
+
+    // 派生へ
+    this->_loadFromJson(json);
+}
+
+void
+roah::distb::config::StepDef::operator()(WorkingContext & context) const
+{
+    if (!this->condition_ || context.evalCondition(*this->condition_))
+    {
+        this->_execute(context);
+    }
+    else
+    {
+        // Skipped.
+        logger.trace("Step '{}' skipped due to condition.", this->cmd_);
+    }
+}
 
 std::string_view
 roah::distb::config::StepDef::getCmd() const noexcept

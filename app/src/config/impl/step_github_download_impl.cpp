@@ -20,6 +20,7 @@ roah::distb::config::impl::StepGithubDownloadImpl::StepGithubDownloadImpl()
     , author_{ "${author}" }
     , repo_{ "${repo}" }
     , archive_path_{ "src.zip" }
+    , access_token_key_{ "default" }
     , error_ok_{ false }
 {}
 
@@ -30,7 +31,7 @@ roah::distb::config::impl::StepGithubDownloadImpl::StepGithubDownloadImpl(StepGi
 roah::distb::config::impl::StepGithubDownloadImpl::~StepGithubDownloadImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepGithubDownloadImpl::operator()(WorkingContext & context) const
+roah::distb::config::impl::StepGithubDownloadImpl::_execute(WorkingContext & context) const
 {
     AppError::check(this->hash_.size() == 64, "'hash' is invalid SHA256 string.");
     AppError::check(!this->author_.empty(), "'author' is empty.");
@@ -59,17 +60,13 @@ roah::distb::config::impl::StepGithubDownloadImpl::operator()(WorkingContext & c
 
         curl_extra_args.emplace_back(u8"-H");
         curl_extra_args.emplace_back(u8"X-GitHub-Api-Version: 2026-03-10");
-        if (const auto & pat = context.getGitHubPublicAccessToken(); !pat.empty())
-        {
-            curl_extra_args.emplace_back(u8"-H");
-            curl_extra_args.emplace_back(u8"Authorization: Bearer " + utils::toU8String(pat));
-        }
 
         StepDownloadImpl download{ kCmd,
                                    "https://api.github.com/repos/${author}/${repo}/zipball/" + this->ref_,
                                    this->archive_path_,
                                    this->hash_,
-                                   std::move(curl_extra_args) };
+                                   "github",
+                                   this->access_token_key_ };
         download(context);
     }
 
@@ -107,7 +104,7 @@ roah::distb::config::impl::StepGithubDownloadImpl::clone() const
 }
 
 void
-roah::distb::config::impl::StepGithubDownloadImpl::loadFromJson(const nlohmann::json & json)
+roah::distb::config::impl::StepGithubDownloadImpl::_loadFromJson(const nlohmann::json & json)
 {
     this->_getStringFromJson(kCmd, json, "output_dir", this->output_dir_);
     this->_getStringFromJson(kCmd, json, "ref", this->ref_);
@@ -115,5 +112,6 @@ roah::distb::config::impl::StepGithubDownloadImpl::loadFromJson(const nlohmann::
     this->_getStringFromJson(kCmd, json, "author", this->author_);
     this->_getStringFromJson(kCmd, json, "repo", this->repo_);
     this->_getStringFromJson(kCmd, json, "archive_path", this->archive_path_);
+    this->_getStringFromJson(kCmd, json, "access_token_key", this->access_token_key_);
     this->_getBoolFromJson(kCmd, json, "error_ok", this->error_ok_);
 }

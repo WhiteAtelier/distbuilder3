@@ -23,7 +23,7 @@ roah::distb::config::impl::StepInstallFileImpl::StepInstallFileImpl(StepInstallF
 roah::distb::config::impl::StepInstallFileImpl::~StepInstallFileImpl() noexcept = default;
 
 void
-roah::distb::config::impl::StepInstallFileImpl::operator()(WorkingContext & context) const
+roah::distb::config::impl::StepInstallFileImpl::_execute(WorkingContext & context) const
 {
     AppError::check(!this->source_file_.empty(), "Source file is empty.");
     AppError::check(!this->destination_dir_.empty(), "Destination directory is empty.");
@@ -77,7 +77,7 @@ roah::distb::config::impl::StepInstallFileImpl::clone() const
 }
 
 void
-roah::distb::config::impl::StepInstallFileImpl::loadFromJson(const nlohmann::json & json)
+roah::distb::config::impl::StepInstallFileImpl::_loadFromJson(const nlohmann::json & json)
 {
     this->_getStringFromJson(kCmd, json, "destination_dir", this->destination_dir_);
 
