@@ -27,6 +27,9 @@ public:
     /// @brief 空文字列を保持する OptionValue を作成する.
     OptionValue();
 
+    template <std::size_t N>
+    OptionValue(const char (&value)[N]);
+
     /// @brief 指定した文字列を保持する OptionValue を作成する.
     OptionValue(std::string value);
 
@@ -146,5 +149,10 @@ private:
     ValueType value_;
 };
 }  // namespace roah::distb::utils
+
+template <std::size_t N>
+roah::distb::utils::OptionValue::OptionValue(const char (&value)[N])
+    : value_{ std::string{ value, N - 1 } }
+{}
 
 #endif  // ROAH_DISTB_UTILS_OPTION_VALUE_HPP
