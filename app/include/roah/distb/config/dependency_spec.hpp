@@ -42,8 +42,8 @@ public:
     const std::vector<std::string> &
     getRequiredVersionRange() const noexcept;
 
-    const std::unordered_map<std::string, utils::OptionValue> &
-    getOptions() const noexcept;
+    std::unordered_map<std::string, utils::OptionValue>
+    getOptions(const config::Variables & variables) const noexcept;
 
     bool
     evalCondition(const config::Variables & variables) const;
@@ -51,10 +51,25 @@ public:
 private:
     using ConditionHolder = utils::DelayCopyableContainer<Condition>;
 
-    std::string                                         name_;  ///< 依存するライブラリの名前.
-    std::vector<std::string>                            required_version_range_;
-    std::unordered_map<std::string, utils::OptionValue> options_;
-    ConditionHolder                                     condition_;
+    struct OverrideOption
+    {
+        OverrideOption();
+        OverrideOption(const OverrideOption &);
+        OverrideOption(OverrideOption &&) noexcept;
+        OverrideOption &
+        operator=(const OverrideOption &);
+        OverrideOption &
+        operator=(OverrideOption &&) noexcept;
+        ~OverrideOption() noexcept;
+
+        utils::OptionValue         value;
+        std::unique_ptr<Condition> condition;
+    };
+
+    std::string                                     name_;  ///< 依存するライブラリの名前.
+    std::vector<std::string>                        required_version_range_;
+    std::unordered_map<std::string, OverrideOption> options_;
+    ConditionHolder                                 condition_;
 };
 
 }  // namespace roah::distb::config

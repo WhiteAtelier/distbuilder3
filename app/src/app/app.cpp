@@ -9,6 +9,7 @@
 #include "roah/distb/logger.hpp"
 #include "roah/distb/utils/path.hpp"
 #include "roah/distb/utils/string.hpp"
+#include "roah/distb/utils/string_expander.hpp"
 #include "roah/distb/utils/subprocess.hpp"
 
 #include <CLI/CLI.hpp>
@@ -569,9 +570,22 @@ roah::distb::app::App::Impl_::_resolveDeps(const std::vector<NewDependencyReques
                 // override option がそのまま適用されるようにする.
                 // もしくは依存先が複数のライブラリに使われている場合,
                 // すでに設定されている option と同じでなければエラーになる.
+                const auto variables        = dep.generateVariables(this->app_config_);
+                auto       override_options = dep_ds.at(child_dep_name).getOptions(variables);
+                for (auto & [key, value] : override_options)
+                {
+                    if (value.hasString())
+                    {
+                        // 評価する
+                        std::string ret;
+                        utils::expandTemplate(static_cast<std::string>(value), variables, ret);
+                        value = ret;
+                    }
+                }
+
                 new_libraries.emplace_back(NewDependencyRequest{
                     .name             = child_dep_name,
-                    .override_options = dep_ds.at(child_dep_name).getOptions(),
+                    .override_options = std::move(override_options),
                 });
             }
             // else:

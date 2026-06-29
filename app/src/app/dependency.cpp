@@ -449,8 +449,9 @@ roah::distb::app::Dependency::build(const AppConfig &                           
         logger.trace("      -- Override Options ---------------------------------");
 
         // override option のチェックを行う
-        const auto & dep_options = dep.getOptions();
-        const auto & req_options = req_dep.getOptions();
+        const auto & req_options   = req_dep.getOptions(variables);
+        const auto & dep_options   = dep.getOptions();
+        const auto & dep_variables = dep.generateVariables(app_config);
         if (req_options.empty())
         {
             logger.trace("         (No Option)");
@@ -475,7 +476,7 @@ roah::distb::app::Dependency::build(const AppConfig &                           
                 if (dep_value.hasString())
                 {
                     std::string ret;
-                    utils::expandTemplate(static_cast<std::string>(dep_value), dep.generateVariables(app_config), ret);
+                    utils::expandTemplate(static_cast<std::string>(dep_value), dep_variables, ret);
                     dep_value = ret;
                 }
                 print_value_fn("         ", " (actual) " + key, dep_value);

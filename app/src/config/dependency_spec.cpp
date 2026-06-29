@@ -55,6 +55,34 @@ roah::distb::config::DependencySpec::updateFromJson(const nlohmann::json & json)
         }
     }
 
+    const auto pick_option_fn = [this](const std::string & key, const nlohmann::json & val) {
+        if (val.is_null())
+        {
+            this->options_.erase(key);
+        }
+        else if (val.is_string())
+        {
+            this->options_.try_emplace(key).first->second.value = val.get<std::string>();
+        }
+        else if (val.is_boolean())
+        {
+            this->options_.try_emplace(key).first->second.value = val.get<bool>();
+        }
+        else if (val.is_number_integer())
+        {
+            this->options_.try_emplace(key).first->second.value = val.get<std::int64_t>();
+        }
+        else if (val.is_number_float())
+        {
+            this->options_.try_emplace(key).first->second.value = val.get<double>();
+        }
+        else
+        {
+            return false;
+        }
+        return true;
+    };
+
     // options フィールド: マージ. null 値はキーを削除する.
     if (const auto i_options = json.find("options"); i_options != json.cend())
     {
@@ -65,25 +93,40 @@ roah::distb::config::DependencySpec::updateFromJson(const nlohmann::json & json)
 
         for (const auto & [key, val] : i_options->items())
         {
-            if (val.is_null())
+            if (pick_option_fn(key, val))
             {
-                this->options_.erase(key);
+                continue;
             }
-            else if (val.is_string())
+
+            if (val.is_object())
             {
-                this->options_[key] = val.get<std::string>();
-            }
-            else if (val.is_boolean())
-            {
-                this->options_[key] = val.get<bool>();
-            }
-            else if (val.is_number_integer())
-            {
-                this->options_[key] = val.get<std::int64_t>();
-            }
-            else if (val.is_number_float())
-            {
-                this->options_[key] = val.get<double>();
+                const auto i_inner_value = val.find("value");
+                if (i_inner_value != val.end())
+                {
+                    if (!pick_option_fn(key, *i_inner_value))
+                    {
+                        throw LibraryConfigError{
+                            "Invalid option value type for '{}': expected a string, number, boolean, or null.",
+                            key
+                        };
+                    }
+                }
+                // condition key がある
+                if (const auto iter = val.find("condition"); iter != val.end())
+                {
+                    // すでに key で options_ に登録されている必要がある.
+                    const auto i_opt = this->options_.find(key);
+                    if (i_opt == this->options_.end())
+                    {
+                        throw LibraryConfigError{
+                            "Invalid option value for '{}': 'value' must be specified before 'condition'.",
+                            key
+                        };
+                    }
+                    auto new_condition = makeConditionFromJson(*iter);
+                    new_condition->loadFromJson(*iter);
+                    i_opt->second.condition = std::move(new_condition);
+                }
             }
             else
             {
@@ -126,10 +169,18 @@ roah::distb::config::DependencySpec::getRequiredVersionRange() const noexcept
              : fallback_range;
 }
 
-const std::unordered_map<std::string, roah::distb::utils::OptionValue> &
-roah::distb::config::DependencySpec::getOptions() const noexcept
+std::unordered_map<std::string, roah::distb::utils::OptionValue>
+roah::distb::config::DependencySpec::getOptions(const config::Variables & variables) const noexcept
 {
-    return this->options_;
+    std::unordered_map<std::string, roah::distb::utils::OptionValue> ret;
+    for (const auto & [key, override_option] : this->options_)
+    {
+        if (!override_option.condition || override_option.condition->eval(variables))
+        {
+            ret.emplace(key, override_option.value);
+        }
+    }
+    return ret;
 }
 
 bool
@@ -141,3 +192,29 @@ roah::distb::config::DependencySpec::evalCondition(const config::Variables & var
     }
     return true;
 }
+
+roah::distb::config::DependencySpec::OverrideOption::OverrideOption() = default;
+
+roah::distb::config::DependencySpec::OverrideOption::OverrideOption(const OverrideOption & cp)
+    : value{ cp.value }
+    , condition{ cp.condition ? cp.condition->clone() : nullptr }
+{}
+
+roah::distb::config::DependencySpec::OverrideOption::OverrideOption(OverrideOption &&) noexcept = default;
+
+roah::distb::config::DependencySpec::OverrideOption &
+roah::distb::config::DependencySpec::OverrideOption::operator=(const OverrideOption & rhs)
+{
+    if (this != &rhs)
+    {
+        this->value     = rhs.value;
+        this->condition = rhs.condition ? rhs.condition->clone() : nullptr;
+    }
+    return *this;
+}
+
+roah::distb::config::DependencySpec::OverrideOption &
+roah::distb::config::DependencySpec::OverrideOption::operator=(OverrideOption &&) noexcept
+    = default;
+
+roah::distb::config::DependencySpec::OverrideOption::~OverrideOption() noexcept = default;
