@@ -37,12 +37,6 @@ public:
     Impl_(std::filesystem::path executable_dir);
     ~Impl_() noexcept;
 
-    bool
-    hasDependency(const std::string_view name) const;
-
-    Dependency &
-    addDependency(std::string author, std::string repo);
-
     int
     run(int argc, const char * const argv[]);
 
@@ -138,37 +132,6 @@ roah::distb::app::App::App(std::filesystem::path executable_dir)
 roah::distb::app::App::Impl_::~Impl_() noexcept = default;
 
 roah::distb::app::App::~App() noexcept = default;
-
-// ============================================================================================= //
-// hasDependency()
-// ============================================================================================= //
-bool
-roah::distb::app::App::Impl_::hasDependency(const std::string_view name) const
-{
-    return this->all_dependencies_.contains(std::string{ name });
-}
-
-bool
-roah::distb::app::App::hasDependency(const std::string_view name) const
-{
-    return this->impl_->hasDependency(name);
-}
-
-// ============================================================================================= //
-// addDependency()
-// ============================================================================================= //
-roah::distb::app::Dependency &
-roah::distb::app::App::Impl_::addDependency(std::string author, std::string repo)
-{
-    auto key = author + "." + repo;
-    return this->all_dependencies_.try_emplace(std::move(key), std::move(author), std::move(repo)).first->second;
-}
-
-roah::distb::app::Dependency &
-roah::distb::app::App::addDependency(std::string author, std::string repo)
-{
-    return this->impl_->addDependency(std::move(author), std::move(repo));
-}
 
 // ============================================================================================= //
 // [STATIC] run()
@@ -371,7 +334,7 @@ roah::distb::app::App::Impl_::_checkCMake()
     this->cmake_version_.minor = std::stoul(version_match[2].str());
     this->cmake_version_.patch = std::stoul(version_match[3].str());
 
-    if (!(this->cmake_version_.major >= 3 && this->cmake_version_.minor >= 19))
+    if (!((this->cmake_version_.major >= 3 && this->cmake_version_.minor >= 19) || this->cmake_version_.major >= 4))
     {
         // 最低バージョンは 3.19.0
         // CMakePresets の最低サポート

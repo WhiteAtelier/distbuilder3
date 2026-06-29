@@ -25,9 +25,9 @@ roah::distb::app::WorkingContextImpl::getBuildRootDirectory() const
 }
 
 const std::string &
-roah::distb::app::WorkingContextImpl::getGitHubPublicAccessToken() const
+roah::distb::app::WorkingContextImpl::getAccessToken(const std::string & site, const std::string & key) const
 {
-    return this->app_config_.getGitHubPublicAccessToken();
+    return this->app_config_.getAccessToken(site, key);
 }
 
 const std::filesystem::path &

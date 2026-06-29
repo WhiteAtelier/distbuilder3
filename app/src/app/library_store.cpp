@@ -60,6 +60,8 @@ roah::distb::app::LibraryStore::fetch()
 
     if ((now - this->last_fetched_at_) > fetch_interval)
     {
+        const auto token = utils::toU8String(this->app_config_.getAccessToken("github", "default"));
+
         // Fetch
         logger.log("Fetching library store from GitHub...");
         std::string new_commit_hash;
@@ -72,11 +74,10 @@ roah::distb::app::LibraryStore::fetch()
                 u8"--silent",
             };
 
-            if (!this->app_config_.getGitHubPublicAccessToken().empty())
+            if (!token.empty())
             {
                 get_commits_cmd.emplace_back(u8"-H");
-                get_commits_cmd.emplace_back(u8"Authorization: Bearer "
-                                             + utils::toU8String(this->app_config_.getGitHubPublicAccessToken()));
+                get_commits_cmd.emplace_back(u8"Authorization: Bearer " + token);
             }
 
             const auto f_commit = utils::run(get_commits_cmd,
@@ -136,11 +137,10 @@ roah::distb::app::LibraryStore::fetch()
                     src_file_path.u8string(),
                 };
 
-                if (!this->app_config_.getGitHubPublicAccessToken().empty())
+                if (!token.empty())
                 {
                     download_cmd.emplace_back(u8"-H");
-                    download_cmd.emplace_back(u8"Authorization: Bearer "
-                                              + utils::toU8String(this->app_config_.getGitHubPublicAccessToken()));
+                    download_cmd.emplace_back(u8"Authorization: Bearer " + token);
                 }
 
                 const auto f_download = utils::run(download_cmd,

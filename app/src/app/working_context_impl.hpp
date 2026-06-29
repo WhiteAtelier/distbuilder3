@@ -26,7 +26,7 @@ public:
     getBuildRootDirectory() const override;
 
     const std::string &
-    getGitHubPublicAccessToken() const override;
+    getAccessToken(const std::string & site, const std::string & key) const override;
 
     const std::filesystem::path &
     getCurrentWorkingDirectory() const override;

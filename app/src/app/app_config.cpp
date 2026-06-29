@@ -133,12 +133,26 @@ roah::distb::app::AppConfig::load()
             }
         }
 
-        if (root.contains("github"))
+        if (root.contains("access_token"))
         {
-            const auto & t_github = root.at("github");
-            if (t_github.contains("public_access_token"))
+            const auto & t_access_token = root.at("access_token");
+            for (const auto & [key, value] : t_access_token.as_table())
             {
-                this->github_public_access_token_ = t_github.at("public_access_token").as_string();
+                auto & secrets = this->access_tokens_.try_emplace(key, key).first->second;
+                if (value.is_string())
+                {
+                    secrets.addSecret(value.as_string());
+                }
+                else if (value.is_table())
+                {
+                    for (const auto & [k, v] : value.as_table())
+                    {
+                        if (v.is_string())
+                        {
+                            secrets.addSecret(k, v.as_string());
+                        }
+                    }
+                }
             }
         }
     }
@@ -162,11 +176,8 @@ roah::distb::app::AppConfig::load()
     logger.trace("[     CMake     ] Executable                = {}", this->cmake_executable_);
     logger.trace("[     CMake     ] Generator                 = {}", this->generator_);
     logger.trace("[     CMake     ] Architecture              = {}", this->architecture_);
-
     logger.trace("[ CMake Presets ] Default Build Directory   = {}", this->cmake_presets_default_build_dir_);
     logger.trace("[ CMake Presets ] Default Install Directory = {}", this->cmake_presets_default_install_dir_);
-    logger.trace("[    GitHub     ] Public Access Token       = {}",
-                 this->github_public_access_token_.empty() ? "(empty)" : "******** (set)");
 }
 
 void
@@ -232,15 +243,13 @@ roah::distb::app::AppConfig::_createTemplate()
                 },
             },
             {
-                "github",
+                "access_token",
                 toml::table{
-                    { "public_access_token",
+                    { "github",
                       create_item(
                           "",
                           { " (Optional) GitHub public access token.",  //
                             " -- This token is used to access GitHub API for public or users private repositories.",
-                            " -- If this token is not set, GitHub API access is limited to 60 requests per hour.",
-                            " -- If this token is set, GitHub API access is limited to 5000 requests per hour.",
                             " -- Get token: https://github.com/settings/personal-access-tokens",
                             " -- Required permissions: Contents: Read-only, Metadata: Read-only",
                             " -- default: (empty)" }) },
@@ -315,7 +324,13 @@ roah::distb::app::AppConfig::getCMakePresetsDefaultInstallDir() const noexcept
 }
 
 const std::string &
-roah::distb::app::AppConfig::getGitHubPublicAccessToken() const noexcept
+roah::distb::app::AppConfig::getAccessToken(const std::string & site, const std::string & key) const noexcept
 {
-    return this->github_public_access_token_;
+    const auto it = this->access_tokens_.find(site);
+    if (it != this->access_tokens_.end())
+    {
+        return it->second.getSecret(key);
+    }
+    static const std::string empty{};
+    return empty;
 }

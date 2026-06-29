@@ -29,7 +29,7 @@ public:
     // 変数には絶対にしないこと.
     [[nodiscard]]
     virtual const std::string &
-    getGitHubPublicAccessToken() const
+    getAccessToken(const std::string & site, const std::string & key) const
         = 0;
 
     [[nodiscard]]

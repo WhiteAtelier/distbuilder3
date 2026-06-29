@@ -131,6 +131,8 @@ roah_add_executable(distbuilder
     SOURCES
         main.cpp
 
+        app/access_token.cpp
+        app/access_token.hpp
         app/app_config_platform.cpp
         app/app_config.cpp
         app/app_config.hpp
