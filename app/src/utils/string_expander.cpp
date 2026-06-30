@@ -49,7 +49,7 @@ struct UpperPreprocessor final : Preprocessor
 };
 
 // 任意の型の値を string 型の OptionValue に変換するプリプロセッサ.
-struct ToStrPreprocessor final : Preprocessor
+struct StrPreprocessor final : Preprocessor
 {
     void
     operator()(roah::distb::utils::OptionValue & val) const override
@@ -70,7 +70,7 @@ struct NotPreprocessor final : Preprocessor
 
 static const LowerPreprocessor k_lower;
 static const UpperPreprocessor k_upper;
-static const ToStrPreprocessor k_to_str;
+static const StrPreprocessor   k_to_str;
 static const NotPreprocessor   k_not;
 
 // プリプロセス名とプリプロセッサを対応させるレジストリ.
@@ -78,7 +78,7 @@ static const NotPreprocessor   k_not;
 static const std::unordered_map<std::string, const Preprocessor *> k_preprocessors{
     { "lower", &k_lower },
     { "upper", &k_upper },
-    { "to_str", &k_to_str },
+    { "str", &k_to_str },
     { "not", &k_not },
 };
 
