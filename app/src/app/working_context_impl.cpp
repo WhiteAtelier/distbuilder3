@@ -3,6 +3,7 @@
 #include "app_config.hpp"
 //
 #include "roah/distb/config/condition.hpp"
+#include "roah/distb/errors.hpp"
 #include "roah/distb/utils/string_expander.hpp"
 
 roah::distb::app::WorkingContextImpl::WorkingContextImpl(
@@ -39,8 +40,18 @@ roah::distb::app::WorkingContextImpl::getCurrentWorkingDirectory() const
 std::string
 roah::distb::app::WorkingContextImpl::resolveString(const std::string & str) const
 {
-    std::string ret;
-    utils::expandTemplate(str, this->variables_, ret);
+    std::string ret = str;
+    // option を展開した後 option 文字列になる可能性がある
+    while (ret.find('$') != std::string::npos)
+    {
+        std::string retn;
+        if (!utils::expandTemplate(ret, this->variables_, retn))
+        {
+            // "$" 単体文字の可能性がある.
+            break;
+        }
+        ret = std::move(retn);
+    }
     return ret;
 }
 

@@ -1,6 +1,7 @@
 #include "roah/distb/config/condition.hpp"
 
 #include "impl/condition_and_op_impl.hpp"
+#include "impl/condition_equal_op_impl.hpp"
 #include "impl/condition_is_false_op_impl.hpp"
 #include "impl/condition_is_true_op_impl.hpp"
 #include "impl/condition_or_op_impl.hpp"
@@ -46,10 +47,9 @@ roah::distb::config::makeConditionFromJson(const nlohmann::json & json)
     }
 
     static std::unordered_map<std::string_view, std::function<std::unique_ptr<Condition>()>> _generators{
-        DISTB_CONDITION(impl::ConditionAndOpImpl),
-        DISTB_CONDITION(impl::ConditionOrOpImpl),
-        DISTB_CONDITION(impl::ConditionIsTrueOpImpl),
-        DISTB_CONDITION(impl::ConditionIsTrueOpImpl),
+        DISTB_CONDITION(impl::ConditionAndOpImpl),    DISTB_CONDITION(impl::ConditionOrOpImpl),
+        DISTB_CONDITION(impl::ConditionIsTrueOpImpl), DISTB_CONDITION(impl::ConditionIsFalseOpImpl),
+        DISTB_CONDITION(impl::ConditionEqualOpImpl),
     };
 
     std::string op_name;

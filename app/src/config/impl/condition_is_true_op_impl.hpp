@@ -11,7 +11,7 @@ namespace roah::distb::config::impl {
 class ConditionIsTrueOpImpl final : public ConditionIsOpImpl
 {
 public:
-    constexpr static std::string_view kOpName = "is_true";
+    constexpr static std::string_view kOpName = "isTrue";
 
     ConditionIsTrueOpImpl();
     ~ConditionIsTrueOpImpl() noexcept override;

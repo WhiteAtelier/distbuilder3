@@ -394,13 +394,31 @@ roah::distb::app::Dependency::build(const AppConfig &                           
         logger.trace("-- Options ------------------------------------------------");
         for (const auto & [key, value] : this->options_)
         {
-            print_value_fn("   ", key, value);
+            if (value.hasString())
+            {
+                std::string expanded_value;
+                utils::expandTemplate(static_cast<std::string>(value), variables, expanded_value);
+                logger.trace("   -- {:<24} = <str> '{}'", key, expanded_value);
+            }
+            else
+            {
+                print_value_fn("   ", key, value);
+            }
         }
 
         logger.trace("-- Variables ----------------------------------------------");
         for (const auto & [key, value] : variables)
         {
-            print_value_fn("   ", key, value);
+            if (value.hasString())
+            {
+                std::string expanded_value;
+                utils::expandTemplate(static_cast<std::string>(value), variables, expanded_value);
+                logger.trace("   -- {:<24} = <str> '{}'", key, expanded_value);
+            }
+            else
+            {
+                print_value_fn("   ", key, value);
+            }
         }
     }
 

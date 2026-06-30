@@ -86,6 +86,8 @@ roah_add_library(distb-config
         config/impl/condition_and_op_impl.hpp
         config/impl/condition_and_or_op_impl.cpp
         config/impl/condition_and_or_op_impl.hpp
+        config/impl/condition_equal_op_impl.cpp
+        config/impl/condition_equal_op_impl.hpp
         config/impl/condition_is_false_op_impl.cpp
         config/impl/condition_is_false_op_impl.hpp
         config/impl/condition_is_op_impl.cpp
