@@ -1,5 +1,6 @@
 #include "condition_and_or_op_impl.hpp"
 
+#include "condition_is_true_op_impl.hpp"
 #include "roah/distb/errors.hpp"
 
 #include <nlohmann/json.hpp>
@@ -41,7 +42,7 @@ roah::distb::config::impl::ConditionAndOrOpImpl::loadFromJson(const nlohmann::js
         }
         else if (child.is_string())
         {
-            this->children_.emplace_back(makeConditionFromJson("or"))->loadFromJson(child);
+            this->children_.emplace_back(makeConditionFromJson(ConditionIsTrueOpImpl::kOpName))->loadFromJson(child);
         }
         else
         {
