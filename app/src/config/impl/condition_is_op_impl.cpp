@@ -18,7 +18,7 @@ roah::distb::config::impl::ConditionIsOpImpl::loadFromJson(const nlohmann::json 
     const auto iter = json.find("value");
     if (iter == json.end())
     {
-        throw LibraryConfigError{ "ConditionIsOpImpl: 'value' field is missing." };
+        throw LibraryConfigError{ "Condition '{}': 'value' field is missing.", this->getOpName() };
     }
 
     if (iter->is_boolean())
