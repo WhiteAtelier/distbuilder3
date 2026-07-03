@@ -11,6 +11,7 @@
 #include "roah/distb/utils/string.hpp"
 #include "roah/distb/utils/string_expander.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <ranges>
