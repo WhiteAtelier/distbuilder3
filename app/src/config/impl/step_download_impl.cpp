@@ -18,8 +18,8 @@
 
 roah::distb::config::impl::StepDownloadImpl::StepDownloadImpl()
     : StepDef{ kCmd }
-    , access_token_key_{ "default" }
     , access_token_site_{}
+    , access_token_key_{ "default" }
 {}
 
 roah::distb::config::impl::StepDownloadImpl::StepDownloadImpl(const std::string_view     cmd_name_driven_by,
