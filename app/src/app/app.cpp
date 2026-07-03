@@ -258,7 +258,7 @@ roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
 #elif defined(ROAH_ARCH_MACOS)
 #    error "unsupported platform"
 #elif defined(ROAH_ARCH_LINUX)
-#    error "unsupported platform"
+        " (default: $HOME/.distbuilder)"
 #else
 #    error "unsupported platform"
 #endif
@@ -508,7 +508,10 @@ roah::distb::app::App::Impl_::_resolveDeps()
 
     for (const auto & root_dep_name : this->dependencies_ | std::ranges::views::keys)
     {
-        new_libraries.emplace_back(NewDependencyRequest{ .name = root_dep_name });
+        new_libraries.emplace_back(NewDependencyRequest{
+            .name             = root_dep_name,
+            .override_options = {},
+        });
     }
     this->_resolveDeps(new_libraries);
 }

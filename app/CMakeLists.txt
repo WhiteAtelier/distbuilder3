@@ -63,8 +63,8 @@ else()
     find_package(OpenSSL REQUIRED)
     target_sources(distb-utils
         PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/impl/hash_unix.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/impl/hash_unix.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/impl/hash_linux.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/impl/hash_linux.hpp"
     )
     target_link_libraries(distb-utils PRIVATE OpenSSL::Crypto)
 endif()
