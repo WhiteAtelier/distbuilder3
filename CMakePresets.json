@@ -1,5 +1,28 @@
 {
     "version": 6,
-    "configurePresets": [],
-    "buildPresets": []
+    "configurePresets": [
+        {
+            "name": "develop",
+            "displayName": "Config in developing",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+                "DISTBUILDER3_BUILD_TESTS": "ON",
+                "DISTBUILDER3_BUILD_DOCS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "build",
+            "displayName": "Build",
+            "configurePreset": "develop"
+        },
+        {
+            "name": "build-debug",
+            "displayName": "Build Debug",
+            "configurePreset": "develop",
+            "configuration": "Debug"
+        }
+    ]
 }
