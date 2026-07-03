@@ -9,6 +9,8 @@
 #    include <Windows.h>
 //
 #    include <ShlObj.h>
+#elif defined(ROAH_ARCH_LINUX)
+#    include <unistd.h>
 #else
 #    error "Unsupported platform"
 #endif
@@ -25,6 +27,8 @@ roah::distb::app::AppConfig::_getDefaultFilePath()
     auto ret = std::filesystem::path{ psz_path } / "distbuilder.conf";
     CoTaskMemFree(psz_path);
     return ret;
+#elif defined(ROAH_ARCH_LINUX)
+    return std::filesystem::path{ std::getenv("HOME") } / ".distbuilder";
 #else
     static_assert(false && "Unsupported platform");
 #endif
@@ -56,6 +60,8 @@ roah::distb::app::AppConfig::_getDefaultInstallDirectory()
     auto ret = std::filesystem::path{ psz_path } / "distb";
     CoTaskMemFree(psz_path);
     return ret;
+#elif defined(ROAH_ARCH_LINUX)
+    return std::filesystem::path{ std::getenv("HOME") } / ".distbuilder-dist.d";
 #else
     static_assert(false && "Unsupported platform");
 #endif
@@ -73,6 +79,8 @@ roah::distb::app::AppConfig::_getAppStoragePath()
     auto ret = std::filesystem::path{ psz_path } / "distbuilder";
     CoTaskMemFree(psz_path);
     return ret;
+#elif defined(ROAH_ARCH_LINUX)
+    return std::filesystem::path{ std::getenv("HOME") } / ".distbuilder-app.d";
 #else
     static_assert(false && "Unsupported platform");
 #endif
