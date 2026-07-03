@@ -70,7 +70,7 @@ roah::distb::utils::HashGeneratorLinuxImpl::getHashBinary() const
 
     std::vector<std::byte> hash_bytes(EVP_MAX_MD_SIZE);
     unsigned int           hash_len = 0;
-    if (EVP_DigestFinal_ex(dup_ctx, hash_bytes.data(), &hash_len) != 1)
+    if (EVP_DigestFinal_ex(dup_ctx, reinterpret_cast<unsigned char *>(hash_bytes.data()), &hash_len) != 1)
     {
         EVP_MD_CTX_free(dup_ctx);
         throw std::runtime_error{ "EVP_DigestFinal_ex failed" };
