@@ -99,19 +99,23 @@ appendQuotedArgW(std::wstring & cmdline, const std::u8string & arg)
 #else
 
 // Unix 用: ファイルディスクリプタからデータを読み取り, stream に書き出しながらキャプチャした文字列を返す.
-std::u8string
-readFdToStream(const int fd, std::ostream & stream)
+std::string
+readFdToStream(const int fd, const bool capture, std::ostream * stream)
 {
-    std::u8string captured;
-    char          buffer[4096];
-    ssize_t       bytes_read = 0;
+    std::string captured;
+    char        buffer[4096];
+    ssize_t     bytes_read = 0;
     while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0)
     {
-        const auto offset = captured.size();
-        captured.resize(offset + static_cast<size_t>(bytes_read));
-        std::memcpy(captured.data() + offset, buffer, static_cast<size_t>(bytes_read));
-        stream.write(buffer, bytes_read);
-        stream.flush();
+        if (capture)
+        {
+            captured += std::string_view{ buffer, static_cast<size_t>(bytes_read) };
+        }
+        if (stream != nullptr)
+        {
+            stream->write(buffer, bytes_read);
+            stream->flush();
+        }
     }
     return captured;
 }
@@ -290,13 +294,23 @@ roah::distb::utils::run(const std::vector<std::u8string> & cmds, const RunArgs &
     close(stderr_pipe[1]);
 
     // スレッドを立ち上げて stdout/stderr をリアルタイムに読み取る.
-    std::u8string stdout_captured;
-    std::u8string stderr_captured;
+    std::string stdout_captured;
+    std::string stderr_captured;
 
     // スレッドをスコープで囲み, スコープを抜けると自動的に join される.
     {
-        std::jthread stdoutThread{ [&]() { stdout_captured = readFdToStream(stdout_pipe[0], std::cout); } };
-        std::jthread stderrThread{ [&]() { stderr_captured = readFdToStream(stderr_pipe[0], std::cerr); } };
+        std::jthread stdoutThread{ [&]() {
+            stdout_captured = readFdToStream(  //
+                stdout_pipe[0],
+                args.capture_stdout,
+                args.print_stdout ? &std::cout : nullptr);
+        } };
+        std::jthread stderrThread{ [&]() {
+            stderr_captured = readFdToStream(  //
+                stderr_pipe[0],
+                args.capture_stderr,
+                args.print_stderr ? &std::cerr : nullptr);
+        } };
     }
 
     close(stdout_pipe[0]);

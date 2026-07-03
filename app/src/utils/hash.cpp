@@ -93,10 +93,10 @@ public:
     }
 
 private:
-#ifdef ROAH_ARCH_WIN32
+#if defined(ROAH_ARCH_WIN32)
     HashGeneratorWin32Impl impl_{ HashGeneratorWin32Impl::HashAlgorithm::SHA256 };
-#else ROAH_ARCH_LINUX
-    HashGeneratorLinuxImpl impl_;
+#elif defined(ROAH_ARCH_LINUX)
+    HashGeneratorLinuxImpl impl_{ HashGeneratorLinuxImpl::HashAlgorithm::SHA256 };
 #endif
 };
 }  // namespace roah::distb::utils
@@ -133,10 +133,10 @@ public:
     }
 
 private:
-#ifdef ROAH_ARCH_WIN32
+#if defined(ROAH_ARCH_WIN32)
     HashGeneratorWin32Impl impl_{ HashGeneratorWin32Impl::HashAlgorithm::MD5 };
-#else ROAH_ARCH_LINUX
-    HashGeneratorLinuxImpl impl_;
+#elif defined(ROAH_ARCH_LINUX)
+    HashGeneratorLinuxImpl impl_{ HashGeneratorLinuxImpl::HashAlgorithm::MD5 };
 #endif
 };
 }  // namespace roah::distb::utils
