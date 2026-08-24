@@ -62,7 +62,8 @@ roah::distb::config::impl::StepGithubDownloadImpl::_execute(WorkingContext & con
         curl_extra_args.emplace_back(u8"X-GitHub-Api-Version: 2026-03-10");
 
         StepDownloadImpl download{ kCmd,
-                                   "https://api.github.com/repos/${author}/${repo}/zipball/" + this->ref_,
+                                   "https://api.github.com/repos/" + this->author_  //
+                                       + "/" + this->repo_ + "/zipball/" + this->ref_,
                                    this->archive_path_,
                                    this->hash_,
                                    "github",
