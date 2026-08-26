@@ -43,11 +43,11 @@ private:
     std::string hash_;              // SHA256 hash
     std::string author_;            // 省略可能, ${author}
     std::string repo_;              // 省略可能, ${repo}
-    std::string archive_path_;      // 省略可能, "src.zip"
+    std::string archive_path_;      // 省略可能, "src.tar.gz"
     std::string access_token_key_;  // 省略可能, デフォルト "default"
     bool        error_ok_;          // 省略可能, デフォルト false
 };
 
 }  // namespace roah::distb::config::impl
 
-#endif  // ROAH_DISTB_CONFIG_IMPL_STEP_WGET_IMPL_HPP
+#endif  // ROAH_DISTB_CONFIG_IMPL_STEP_GITHUB_DOWNLOAD_IMPL_HPP
