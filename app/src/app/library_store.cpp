@@ -70,7 +70,7 @@ roah::distb::app::LibraryStore::fetch()
                 u8"curl",
                 u8"https://api.github.com/repos/WhiteAtelier/distbuilder3-libraries/branches/main",
                 u8"-H",
-                u8"Accept: application/vnd.github+json"  //
+                u8"Accept: application/vnd.github+json",  //
                 u8"--silent",
             };
 
@@ -116,9 +116,9 @@ roah::distb::app::LibraryStore::fetch()
         {
             logger.log("Updating libraryies...");
 
-            // 更新があったので, zip を落とす
+            // 更新があったので, tar.gz を落とす
             const auto working_dir   = this->app_config_.getBuildDirectory() / u8"_libs";
-            const auto src_file_path = working_dir / u8"src.zip";
+            const auto src_file_path = working_dir / u8"src.tar.gz";
 
             if (std::filesystem::exists(working_dir))
             {
@@ -130,7 +130,7 @@ roah::distb::app::LibraryStore::fetch()
                 std::vector<std::u8string> download_cmd = {
                     u8"curl",
                     u8"https://github.com/WhiteAtelier/distbuilder3-libraries/archive/"  //
-                        + utils::toU8String(new_commit_hash) + u8".zip",
+                        + utils::toU8String(new_commit_hash) + u8".tar.gz",
                     u8"--fail",
                     u8"--location",
                     u8"--output",
@@ -182,7 +182,10 @@ roah::distb::app::LibraryStore::fetch()
             const auto dst_dir = this->app_config_.getAppStoragePath() / u8"libs";
 
             std::filesystem::create_directories(dst_dir);
-            std::filesystem::copy(src_dir, dst_dir, std::filesystem::copy_options::overwrite_existing);
+            std::filesystem::copy(
+                src_dir,
+                dst_dir,
+                std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
 
             logger.log("LibraryStore: Updated successfully.");
         }

@@ -19,7 +19,7 @@ roah::distb::config::impl::StepGithubDownloadImpl::StepGithubDownloadImpl()
     , hash_{}
     , author_{ "${author}" }
     , repo_{ "${repo}" }
-    , archive_path_{ "src.zip" }
+    , archive_path_{ "src.tar.gz" }
     , access_token_key_{ "default" }
     , error_ok_{ false }
 {}
@@ -63,7 +63,7 @@ roah::distb::config::impl::StepGithubDownloadImpl::_execute(WorkingContext & con
 
         StepDownloadImpl download{ kCmd,
                                    "https://api.github.com/repos/" + this->author_  //
-                                       + "/" + this->repo_ + "/zipball/" + this->ref_,
+                                       + "/" + this->repo_ + "/tarball/" + this->ref_,
                                    this->archive_path_,
                                    this->hash_,
                                    "github",
