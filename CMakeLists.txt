@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.30)
 
 project(distbuilder
     VERSION
-        3.2.2
+        3.3.0
     DESCRIPTION
         "Roah Distbuilder"
     LANGUAGES
