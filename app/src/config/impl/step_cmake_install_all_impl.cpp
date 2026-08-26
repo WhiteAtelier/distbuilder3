@@ -14,7 +14,11 @@
 
 roah::distb::config::impl::StepCMakeInstallAllImpl::StepCMakeInstallAllImpl()
     : StepDef{ kCmd }
+#if defined(ROAH_ARCH_LINUX)
+    , configs_{ "Release" }
+#else
     , configs_{ "Debug", "Release" }
+#endif
 {}
 
 roah::distb::config::impl::StepCMakeInstallAllImpl::StepCMakeInstallAllImpl(const StepCMakeInstallAllImpl &) = default;
@@ -29,7 +33,18 @@ roah::distb::config::impl::StepCMakeInstallAllImpl::_execute(WorkingContext & co
 {
     AppError::check(!this->build_dir_.empty(), "Build directory is empty.");
 
-    logger.log("CMake Install (Debug/Release): {}", this->build_dir_);
+    {
+        std::string configs_str;
+        for (const auto & config : this->configs_)
+        {
+            if (!configs_str.empty())
+            {
+                configs_str += "/";
+            }
+            configs_str += config;
+        }
+        logger.log("CMake Install ({}): {}", configs_str, this->build_dir_);
+    }
 
     // Path を決定する
     const auto & root        = context.getCurrentWorkingDirectory();

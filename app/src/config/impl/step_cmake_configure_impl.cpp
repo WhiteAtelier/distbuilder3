@@ -18,7 +18,11 @@ roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl()
     , source_dir_{ "src" }
     , build_dir_{ "build" }
     , debug_postfix_{ "d" }
+#if defined(ROAH_ARCH_LINUX)
+    , configs_{ "Release" }
+#else
     , configs_{ "Debug", "Release" }
+#endif
 {}
 
 roah::distb::config::impl::StepCMakeConfigureImpl::StepCMakeConfigureImpl(const StepCMakeConfigureImpl &) = default;
@@ -126,6 +130,12 @@ roah::distb::config::impl::StepCMakeConfigureImpl::_execute(WorkingContext & con
         config_types += config;
     }
     cmd.emplace_back(u8"-DCMAKE_CONFIGURATION_TYPES=" + utils::toU8String(config_types));
+#if defined(ROAH_ARCH_LINUX)
+    if (!this->configs_.empty())
+    {
+        cmd.emplace_back(u8"-DCMAKE_BUILD_TYPE=" + utils::toU8String(this->configs_.front()));
+    }
+#endif
 
     if (const auto cxx_standard = context.resolveString("${cxx_standard}");  //
         !cxx_standard.empty())
