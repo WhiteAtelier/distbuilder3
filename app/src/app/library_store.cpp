@@ -58,7 +58,7 @@ roah::distb::app::LibraryStore::fetch()
     const auto                     now = std::chrono::system_clock::now();
     constexpr std::chrono::minutes fetch_interval{ 10 };
 
-    if ((now - this->last_fetched_at_) > fetch_interval)
+    if ((now - this->last_fetched_at_) > fetch_interval || this->app_config_.isForceRefetchLibraries())
     {
         const auto token = utils::toU8String(this->app_config_.getAccessToken("github", "default"));
 

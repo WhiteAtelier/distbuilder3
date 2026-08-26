@@ -83,6 +83,7 @@ private:
     bool                                           a_force_build_;
     bool                                           a_no_build_;
     bool                                           a_check_conf_;
+    bool                                           a_force_refetch_libraries_;
     std::string                                    a_config_file_;
     std::string                                    a_source_dir_;
     std::string                                    a_cmake_preset_file_;
@@ -303,6 +304,9 @@ roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
         ->default_val(this->a_licenses_dir_);
 
     build_grp  //
+        ->add_flag("--force-refetch-libraries", this->a_force_refetch_libraries_, "Force refetch libraries list.");
+
+    build_grp  //
         ->add_option("sourceDir", this->a_source_dir_, "Path to the source directory.")
         ->check(CLI::ExistingDirectory)
         ->required(true);
@@ -388,6 +392,9 @@ roah::distb::app::App::Impl_::_initialize()
     AppError::check(std::filesystem::exists(this->deps_file_path_),
                     "{}/deps.toml is not found.",
                     this->source_dir_.u8string());
+
+    // refetch
+    this->app_config_.setForceRefetchLibraries(this->a_force_refetch_libraries_);
 }
 
 // ============================================================================================= //

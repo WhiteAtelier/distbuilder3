@@ -18,6 +18,7 @@ roah::distb::app::AppConfig::AppConfig(std::filesystem::path executable_dir)
     , build_dir_{ _getDefaultBuildDirectory() }
     , install_dir_{ _getDefaultInstallDirectory() }
     , search_paths_{ { this->default_search_path_ } }
+    , force_refetch_libraries_{ false }
     , cmake_executable_{ u8"cmake" }
     , generator_{}
     , architecture_{}
@@ -37,6 +38,18 @@ void
 roah::distb::app::AppConfig::setFilePath(std::filesystem::path path)
 {
     this->file_path_ = std::move(path);
+}
+
+void
+roah::distb::app::AppConfig::setForceRefetchLibraries(bool enabled) noexcept
+{
+    this->force_refetch_libraries_ = enabled;
+}
+
+bool
+roah::distb::app::AppConfig::isForceRefetchLibraries() const noexcept
+{
+    return this->force_refetch_libraries_;
 }
 
 void

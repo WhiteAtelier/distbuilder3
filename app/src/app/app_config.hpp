@@ -34,6 +34,13 @@ public:
     setFilePath(std::filesystem::path path);
 
     void
+    setForceRefetchLibraries(bool enabled) noexcept;
+
+    [[nodiscard]]
+    bool
+    isForceRefetchLibraries() const noexcept;
+
+    void
     load();
 
     const std::filesystem::path &
@@ -93,6 +100,7 @@ private:
     std::filesystem::path                        build_dir_;
     std::filesystem::path                        install_dir_;
     std::vector<std::filesystem::path>           search_paths_;
+    bool                                         force_refetch_libraries_;
     std::u8string                                cmake_executable_;
     std::u8string                                generator_;
     std::u8string                                architecture_;
