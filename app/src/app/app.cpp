@@ -912,7 +912,11 @@ roah::distb::app::App::Impl_::_exportCMakePresets() const
         {
             if (!paths.empty())
             {
+#ifdef ROAH_ARCH_WIN32
                 paths += u8";";
+#else
+                paths += u8":";
+#endif
             }
             paths += (this->app_config_.getInstallDirectory()    //
                       / (dep.getAuthor() + "." + dep.getRepo())  //
