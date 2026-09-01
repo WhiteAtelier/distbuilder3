@@ -19,7 +19,7 @@ roah::distb::config::impl::ConditionAndOpImpl::eval(const Variables & variables)
             return false;
         }
     }
-    return false;
+    return true;
 }
 
 std::unique_ptr<roah::distb::config::Condition>
