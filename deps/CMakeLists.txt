@@ -102,7 +102,7 @@ if (NOT CLI11_FOUND)
         GIT_REPOSITORY
             https://github.com/CLIUtils/CLI11
         GIT_TAG
-            37bb6edc5317e99af72ef48405e65d9ca5218861  # v2.6.2
+            cbd58a3696887b34c70949aef21a71735a0c2ad5  # v2.7.2
         GIT_SHALLOW
             TRUE
         OVERRIDE_FIND_PACKAGE
@@ -126,7 +126,7 @@ if (DISTBUILDER3_BUILD_TESTS)
             GIT_REPOSITORY
                 https://github.com/google/googletest
             GIT_TAG
-                52eb8108c5bdec04579160ae17225d66034bd723  # v1.17.0
+                063de7e9578f82b369302001269680b4b1553359  # v1.18.0
             GIT_SHALLOW
                 TRUE
             OVERRIDE_FIND_PACKAGE
