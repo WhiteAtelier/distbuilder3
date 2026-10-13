@@ -40,8 +40,11 @@ public:
     bool
     isForceRefetchLibraries() const noexcept;
 
-    void
+    bool
     load();
+
+    void
+    createTemplate(const bool force);
 
     const std::filesystem::path &
     getExecutableDirectory() const noexcept;
@@ -88,9 +91,6 @@ private:
 
     static std::filesystem::path
     _getAppStoragePath();
-
-    void
-    _createTemplate();
 
     const std::filesystem::path                  executable_dir_;
     const std::filesystem::path                  app_storage_path_;

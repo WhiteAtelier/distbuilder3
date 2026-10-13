@@ -83,6 +83,8 @@ private:
     bool                                           a_force_build_;
     bool                                           a_no_build_;
     bool                                           a_check_conf_;
+    bool                                           a_create_conf_;
+    bool                                           a_create_conf_overwrite_;
     bool                                           a_force_refetch_libraries_;
     std::string                                    a_config_file_;
     std::string                                    a_source_dir_;
@@ -120,6 +122,10 @@ roah::distb::app::App::Impl_::Impl_(std::filesystem::path executable_dir)
     , a_force_build_{ false }
     , a_no_build_{ false }
     , a_check_conf_{ false }
+    , a_create_conf_{ false }
+    , a_create_conf_overwrite_{ false }
+    , a_force_refetch_libraries_{ false }
+    , a_config_file_{}
     , a_source_dir_{ "." }
     , a_cmake_preset_file_{ "./CMakeUserPresets.json" }
     , app_config_{ std::move(executable_dir) }
@@ -154,14 +160,23 @@ roah::distb::app::App::Impl_::run(int argc, const char * const argv[])
     {
         this->app_config_.setFilePath(this->a_config_file_);
     }
-
-    // Load configuration
-    this->app_config_.load();
+    if (this->a_create_conf_)
+    {
+        this->app_config_.createTemplate(this->a_create_conf_overwrite_);
+        logger.log("Created new configuration file: {}", this->app_config_.getFilePath().u8string());
+        return 0;
+    }
+    const auto config_loaded = this->app_config_.load();
 
     this->_checkCMake();
 
     if (this->a_check_conf_)
     {
+        if (!config_loaded)
+        {
+            logger.log("Configuration file not found.");
+            logger.log("-- `distbuilder --create-conf` to create a new configuration file.");
+        }
         return 0;
     }
 
@@ -250,26 +265,34 @@ roah::distb::app::App::Impl_::_setupCli(CLI::App & cli_app)
                                          DISTBUILDER3_VERSION_MINOR,
                                          DISTBUILDER3_VERSION_PATCH));
 
-    cli_app.add_option(  //
-        "-c,--config",
-        this->a_config_file_,
-        "Path to the configuration file."
+    cli_app
+        .add_option(  //
+            "-c,--config",
+            this->a_config_file_,
+            "Path to the configuration file. (Default: "
 #ifdef ROAH_ARCH_WIN32
-        " (default: %USERPROFILE%\\distbuilder.conf)"
+            "%USERPROFILE%\\distbuilder.conf"
 #elif defined(ROAH_ARCH_MACOS)
 #    error "unsupported platform"
 #elif defined(ROAH_ARCH_LINUX)
-        " (default: $HOME/.distbuilder)"
+            "$HOME/.distbuilder"
 #else
 #    error "unsupported platform"
 #endif
-    );
+            ")")
+        ->envname("DISTBUILDER_CONFIG");
 
     auto * root_grp = cli_app.add_option_group("distbuilder");
 
     auto * cconf_grp = root_grp->add_option_group("Check config mode", "Options for checking the user conf file.");
     cconf_grp->footer(" ");  // Empty Line
     cconf_grp->add_flag("--check-conf", this->a_check_conf_, "Check configuration file.");
+
+    auto * rconf_grp = root_grp->add_option_group("Create config mode", "Options for creating configuration file.");
+    rconf_grp->footer(" ");  // Empty Line
+    rconf_grp->add_flag("--create-conf", this->a_create_conf_, "Create a new configuration file.");
+    rconf_grp->add_flag("--overwrite", this->a_create_conf_overwrite_, "Overwrite existing configuration file.")
+        ->needs("--create-conf");
 
     auto * build_grp = root_grp->add_option_group("Build mode", "Main distbuilder options");
     build_grp->footer(" ");  // Empty Line

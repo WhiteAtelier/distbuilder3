@@ -52,13 +52,13 @@ roah::distb::app::AppConfig::isForceRefetchLibraries() const noexcept
     return this->force_refetch_libraries_;
 }
 
-void
+bool
 roah::distb::app::AppConfig::load()
 {
     if (!std::filesystem::exists(this->file_path_))
     {
-        logger.trace("Config file does not exist, generating template. {}", this->file_path_.string());
-        this->_createTemplate();
+        logger.trace("Config file does not exist. {}", this->file_path_.string());
+        return false;
     }
 
     logger.trace("Open config file. {}", this->file_path_.string());
@@ -191,10 +191,11 @@ roah::distb::app::AppConfig::load()
     logger.trace("[     CMake     ] Architecture              = {}", this->architecture_);
     logger.trace("[ CMake Presets ] Default Build Directory   = {}", this->cmake_presets_default_build_dir_);
     logger.trace("[ CMake Presets ] Default Install Directory = {}", this->cmake_presets_default_install_dir_);
+    return true;
 }
 
 void
-roah::distb::app::AppConfig::_createTemplate()
+roah::distb::app::AppConfig::createTemplate(const bool force)
 {
     const auto create_item = [](auto v, std::vector<std::string> comments) {
         toml::value t_v = std::move(v);
@@ -270,6 +271,11 @@ roah::distb::app::AppConfig::_createTemplate()
             },
         },
     };
+
+    if (!force && std::filesystem::exists(this->file_path_))
+    {
+        AppError::throw_("Error: Config file already exists: {}", this->file_path_.u8string());
+    }
 
     std::ofstream ofst{ this->file_path_ };
     AppError::check(ofst, "Failed to create config file: {}", this->file_path_.u8string());
