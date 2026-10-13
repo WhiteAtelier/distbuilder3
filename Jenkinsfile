@@ -16,7 +16,7 @@ pipeline {
         stage('Configure') {
             steps {
                 script {
-                    runCommand('cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDISTBUILDER3_BUILD_TESTS=ON')
+                    runCommand("cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDISTBUILDER3_BUILD_TESTS=ON -DDISTBUILDER3_ENABLE_CPACK=ON -DDISTBUILDER3_CPACK_PACKAGE_DIRECTORY=\"${env.WORKSPACE}/cpack\"")
                 }
             }
         }
@@ -51,6 +51,18 @@ pipeline {
                     runCommand("cmake --install build --prefix \"${env.WORKSPACE}/install\"")
                 }
                 archiveArtifacts artifacts: 'install/**', fingerprint: true
+            }
+        }
+
+        stage('Package') {
+            steps {
+                dir('cpack') {
+                    deleteDir()
+                }
+                script {
+                    runCommand('cpack --config build/CPackConfig.cmake -C Release')
+                }
+                archiveArtifacts artifacts: 'cpack/*.tar.gz', fingerprint: true
             }
         }
     }
