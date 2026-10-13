@@ -36,7 +36,13 @@ cmake -S . -B build -DDISTBUILDER3_ENABLE_CPACK=ON -DDISTBUILDER3_CPACK_PACKAGE_
 ```
 
 パッケージ名にはバージョン, OS, architecture が含まれます.
-例えば Linux の x86_64 ビルドでは, `distbuilder-3.4.0-Linux-x86_64.tar.gz` になります.
+Linux のネイティブビルドでは, OS の部分にディストリビューション名とバージョンを使用します.
+例えば Ubuntu 24.04 の x86_64 ビルドでは, `distbuilder-3.4.0-Ubuntu-24.04-x86_64.tar.gz` になります.
+ディストリビューション情報を取得できない場合やクロスコンパイル時は, `Linux` を使用します.
+Windows のネイティブビルドでは, ビルド環境の OS バージョンとビルド番号を使用します.
+例えば `distbuilder-3.4.0-Windows-10.0.26200-x86_64.tar.gz` になります.
+Windows 10 / 11 は内部バージョンの先頭がともに `10.0` になるため, ビルド番号まで含めます.
+OS バージョンを取得できない場合やクロスコンパイル時は, `Windows` を使用します.
 アーカイブには既存の `install()` 定義に従ってファイルを格納し, 実行ファイルは `bin` ディレクトリに配置します.
 
 ## License
