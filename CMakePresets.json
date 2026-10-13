@@ -8,7 +8,8 @@
             "cacheVariables": {
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
                 "DISTBUILDER3_BUILD_TESTS": "ON",
-                "DISTBUILDER3_BUILD_DOCS": "ON"
+                "DISTBUILDER3_BUILD_DOCS": "ON",
+                "DISTBUILDER3_ENABLE_CPACK": "ON"
             }
         }
     ],

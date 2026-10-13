@@ -13,7 +13,9 @@ project(distbuilder
         CXX
 )
 
-option(DISTBUILDER3_BUILD_TESTS "Build test project." OFF)
+option(DISTBUILDER3_BUILD_TESTS  "Build test project." OFF)
+option(DISTBUILDER3_ENABLE_CPACK "Enable CPack integration." OFF)
+set(DISTBUILDER3_CPACK_PACKAGE_DIRECTORY "${CMAKE_SOURCE_DIR}/cpack" CACHE PATH "Package output directory.")
 
 include(cmake/utils.cmake)
 
@@ -47,3 +49,7 @@ if (DISTBUILDER3_BUILD_TESTS)
 endif()
 
 add_subdirectory(app)
+
+if (DISTBUILDER3_ENABLE_CPACK)
+    include(cmake/cpack.cmake)
+endif()
