@@ -93,8 +93,8 @@ private:
     _getAppStoragePath();
 
     const std::filesystem::path                  executable_dir_;
-    const std::filesystem::path                  app_storage_path_;
-    const std::filesystem::path                  default_search_path_;
+    std::filesystem::path                        app_storage_path_;
+    std::filesystem::path                        default_search_path_;
     //
     std::filesystem::path                        file_path_;
     std::filesystem::path                        build_dir_;

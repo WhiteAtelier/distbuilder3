@@ -95,6 +95,14 @@ roah::distb::app::AppConfig::load()
                     this->install_dir_ = std::move(path);
                 }
             }
+            if (t_directory.contains("app_storage"))
+            {
+                if (auto path = utils::toU8String(t_directory.at("app_storage").as_string()); !path.empty())
+                {
+                    this->app_storage_path_    = std::move(path);
+                    this->default_search_path_ = this->app_storage_path_ / "libs";
+                }
+            }
             if (t_directory.contains("search_paths"))
             {
                 const auto & spaths = t_directory.at("search_paths").as_array();
@@ -216,6 +224,10 @@ roah::distb::app::AppConfig::createTemplate(const bool force)
                       create_item("",
                                   { " Path to install directory.",  //
                                     " -- default: " + utils::toString(this->install_dir_.u8string()) }) },
+                    { "app_storage",
+                      create_item("",
+                                  { " Path to app storage directory.",  //
+                                    " -- default: " + utils::toString(this->app_storage_path_.u8string()) }) },
                     { "search_paths",  //
                       create_item(toml::array{}, { " Extra search paths." }) },
                 },
