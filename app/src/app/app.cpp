@@ -933,19 +933,18 @@ roah::distb::app::App::Impl_::_exportCMakePresets() const
         std::u8string paths;
         for (const auto & dep : this->all_dependencies_ | std::ranges::views::values)
         {
-            if (!paths.empty())
-            {
-#ifdef ROAH_ARCH_WIN32
-                paths += u8";";
-#else
-                paths += u8":";
-#endif
-            }
             paths += (this->app_config_.getInstallDirectory()    //
                       / (dep.getAuthor() + "." + dep.getRepo())  //
                       / dep.getStateHash())
                          .u8string();
+#ifdef ROAH_ARCH_WIN32
+            paths += u8";";
+#else
+            paths += u8":";
+#endif
         }
+        paths += u8"$penv{CMAKE_PREFIX_PATH}";
+
         env["CMAKE_PREFIX_PATH"] = utils::toString(paths);
 
         // CXX Standard の指定がある場合は, ARGS に追加する
